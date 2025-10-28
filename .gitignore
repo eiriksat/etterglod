@@ -1,0 +1,23 @@
+# root
+node_modules/
+.next/
+uploads/
+.env
+.env.local
+
+# frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/.vercel/
+
+# backend
+backend/node_modules/
+backend/.fly/
+backend/uploads/
+backend/dist/
+backend/8080
+
+# prisma lokalt
+prisma/dev.db
+backend/prisma/*.db

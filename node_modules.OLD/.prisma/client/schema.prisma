@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum WelcomeScope {
+  OPEN
+  FAMILY
+  PRIVATE
+}
+
+model Memorial {
+  id           Int       @id @default(autoincrement())
+  slug         String    @unique
+  name         String
+  birthDate    DateTime?
+  deathDate    DateTime?
+  obituaryNote String? // f.eks. "sovnet stille inn ..."
+  bio          String?
+  imageUrl     String?
+
+  // Seremoni i kirke
+  ceremony Ceremony?
+
+  // Minnestund/resepsjon i annet lokale
+  reception Reception?
+
+  notes       MemoryNote[]
+  attendances Attendance[]
+  createdAt   DateTime     @default(now())
+}
+
+model Ceremony {
+  id         Int      @id @default(autoincrement())
+  memorialId Int      @unique
+  dateTime   DateTime
+  venue      String
+  address    String?
+  mapUrl     String?
+  livestream String?
+  Memorial   Memorial @relation(fields: [memorialId], references: [id])
+}
+
+model Reception {
+  id           Int          @id @default(autoincrement())
+  memorialId   Int          @unique
+  dateTime     DateTime
+  venue        String
+  address      String?
+  mapUrl       String?
+  welcomeScope WelcomeScope @default(OPEN)
+  wishes       String?
+  Memorial     Memorial     @relation(fields: [memorialId], references: [id])
+}
+
+model Attendance {
+  id            Int      @id @default(autoincrement())
+  memorialId    Int
+  name          String
+  email         String
+  count         Int      @default(1)
+  notes         String?
+  wantsToSpeak  Boolean  @default(false)
+  relationsJson String?
+  createdAt     DateTime @default(now())
+  Memorial      Memorial @relation(fields: [memorialId], references: [id])
+
+  @@index([memorialId])
+}
+
+model MemoryNote {
+  id         Int      @id @default(autoincrement())
+  memorialId Int
+  author     String
+  text       String
+  approved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  Memorial   Memorial @relation(fields: [memorialId], references: [id])
+
+  @@index([memorialId, approved])
+}
