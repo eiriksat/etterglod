@@ -4,8 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL!;
-const TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
+// ✅ Trygg base-URL for API (alltid absolutt)
+const API =
+    process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")
+        ? process.env.NEXT_PUBLIC_API_URL
+        : (typeof window === "undefined"
+            ? "http://localhost:4000"       // server-side i dev
+            : "https://api.etterglod.no");  // client-side i prod
+
+// ✅ Token kan være tom lokalt – ikke bruk non-null (!) her
+const TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? "";
 
 type WelcomeScope = "OPEN" | "FAMILY" | "PRIVATE";
 
