@@ -1,8 +1,5 @@
-import type { NextConfig } from "next";
-
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+// frontend/next.config.ts
+const nextConfig = {
     async rewrites() {
         return [
             { source: "/api/:path*", destination: "https://api.etterglod.no/api/:path*" },
