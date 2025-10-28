@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 const API =
-    process.env.NEXT_PUBLIC_API_URL?.startsWith("http")
-        ? process.env.NEXT_PUBLIC_API_URL
-        : "http://localhost:4000";
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === "development"
+        ? "http://localhost:4000"
+        : "https://api.etterglod.no");
 // MOCK inntil backend/DB oppdateres:
 const welcomeScope: "open" | "family" | "private" = "open";
 const ceremonyWishes =
