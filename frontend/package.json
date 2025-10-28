@@ -7,13 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "node node_modules/lightningcss/install.mjs"
+
   },
   "dependencies": {
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "lightningcss": "^1.25.1"
+
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
