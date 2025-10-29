@@ -5,7 +5,7 @@ import { requireAdmin } from "../middleware/admin.js";
 export const attendance = Router();
 
 // Myk kapasitet (kan flyttes til DB senere, f.eks. Memorial.capacity)
-const CAPACITY = 20;
+const CAPACITY = 60;
 
 /** Hjelpere */
 function toBoolean(v: unknown): boolean {
