@@ -49,10 +49,16 @@ export default function AdminAttendancePage() {
 
     useEffect(() => {
         (async () => {
+            // Ikke fetch hvis GUID ikke matcher
             if (!slug) return;
+            if (!ADMIN_GUID || keyParam !== ADMIN_GUID) return;
+
             setLoading(true);
             setErr(null);
             try {
+                // Debug – ta bort når grønt
+                console.debug("[ADMIN/ATTENDANCE] fetch", { API, slug, key: keyParam.slice(0, 6) + "…" });
+
                 const res = await fetch(`${API}/api/memorials/${slug}/attendance`, {
                     headers: { Authorization: `Bearer ${TOKEN}` },
                     cache: "no-store",
@@ -66,7 +72,7 @@ export default function AdminAttendancePage() {
                 setLoading(false);
             }
         })();
-    }, [slug]);
+    }, [slug, keyParam]); // 👈 inkluder keyParam
 
     const { totalGuests, plusOnes, remaining } = useMemo(() => {
         const plus = items.filter((i) => i.plusOne).length;
