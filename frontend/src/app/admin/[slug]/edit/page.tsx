@@ -4,11 +4,18 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-// ALLTID bruk denne varianten
-const API =
-    process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")
-        ? process.env.NEXT_PUBLIC_API_URL
-        : (typeof window === "undefined" ? "http://localhost:4000" : "https://api.etterglod.no");
+// Stabil API-base: aldri undefined, aldri relativ
+const API = (() => {
+    const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+    // Lokalt (node på server under dev) -> localhost
+    if (typeof window === "undefined") {
+        return process.env.NODE_ENV === "development"
+            ? "http://localhost:4000"
+            : (env.startsWith("http") ? env : "https://api.etterglod.no");
+    }
+    // I browseren -> bruk env hvis gyldig, ellers prod fallback
+    return env.startsWith("http") ? env : "https://api.etterglod.no";
+})();
 
 // ✅ Token kan være tom lokalt – ikke bruk non-null (!) her
 const TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? "";

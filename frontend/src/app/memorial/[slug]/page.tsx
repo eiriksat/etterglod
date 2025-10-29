@@ -3,11 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
-const API =
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === "development"
-        ? "http://localhost:4000"
-        : "https://api.etterglod.no");
+// Stabil API-base: aldri undefined, aldri relativ
+const API = (() => {
+    const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+    // Lokalt (node på server under dev) -> localhost
+    if (typeof window === "undefined") {
+        return process.env.NODE_ENV === "development"
+            ? "http://localhost:4000"
+            : (env.startsWith("http") ? env : "https://api.etterglod.no");
+    }
+    // I browseren -> bruk env hvis gyldig, ellers prod fallback
+    return env.startsWith("http") ? env : "https://api.etterglod.no";
+})();
 
 // Kapasitet midlertidig hardkodet
 const CAPACITY = 60;
