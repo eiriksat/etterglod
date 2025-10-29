@@ -264,7 +264,6 @@ export default function MemorialPage() {
 }
 
 /* ------------------- Påmeldingsskjema ------------------- */
-
 function RSVPForm({
                       slug,
                       onSuccess,
@@ -277,16 +276,18 @@ function RSVPForm({
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [plusOne, setPlusOne] = useState(false);
-    const [allergies, setAllergies] = useState("");
-    const [msg, setMsg] = useState<string | null>(null); // feilmelding
-    const [okMsg, setOkMsg] = useState<string | null>(null); // suksessmelding (inline)
+    const [allergyNotes, setAllergyNotes] = useState(""); // allergier + evt. kommentarer
+
     const [loading, setLoading] = useState(false);
+    const [errMsg, setErrMsg] = useState<string | null>(null);
+    const [okMsg, setOkMsg] = useState<string | null>(null);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setLoading(true);
-        setMsg(null);
+        setErrMsg(null);
         setOkMsg(null);
+
         try {
             const res = await fetch(`${API}/api/memorials/${slug}/attendance`, {
                 method: "POST",
@@ -295,97 +296,105 @@ function RSVPForm({
                     name,
                     email,
                     plusOne,
-                    allergies: allergies || undefined,
+                    allergies: allergyNotes || undefined, // backend-feltet heter "allergies"
                 }),
             });
 
+            // Prøv å lese JSON, men tolerer tom body
             let data: any = {};
-            try {
-                data = await res.json();
-            } catch {
-                /* tom body tolereres */
-            }
+            try { data = await res.json(); } catch {}
 
             if (!res.ok) {
-                setMsg(data?.errors ? JSON.stringify(data.errors) : data?.error ?? `Noe gikk galt (${res.status}).`);
+                setErrMsg(
+                    typeof data?.error === "string"
+                        ? data.error
+                        : `Noe gikk galt (${res.status}).`
+                );
                 return;
             }
 
-            setOkMsg("Takk! Din påmelding er registrert.");
+            // OK
+            setOkMsg("Takk! Påmeldingen er registrert.");
             setName("");
             setEmail("");
             setPlusOne(false);
-            setAllergies("");
+            setAllergyNotes("");
             onSuccess?.();
         } catch (e: any) {
-            setMsg(String(e));
+            setErrMsg(String(e?.message ?? e));
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-3">
+        <div className="space-y-3">
             {okMsg && (
-                <div className="rounded bg-green-50 border border-green-200 p-3 text-sm">
+                <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm">
                     {okMsg}
                 </div>
             )}
-            {msg && (
-                <div className="rounded bg-red-50 border border-red-200 p-3 text-sm">
-                    {msg}
+            {errMsg && (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {errMsg}
                 </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                    className="border rounded px-3 py-2"
-                    placeholder="Navn"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                />
-                <input
-                    className="border rounded px-3 py-2"
-                    placeholder="E-post"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-            </div>
+            <form onSubmit={onSubmit} className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                        className="border rounded px-3 py-2"
+                        placeholder="Navn"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                    />
+                    <input
+                        className="border rounded px-3 py-2"
+                        placeholder="E-post"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                </div>
 
-            <div className="flex items-center gap-2">
-                <input
-                    id="plusOne"
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={plusOne}
-                    onChange={(e) => setPlusOne(e.target.checked)}
+                <div className="flex items-center gap-2">
+                    <input
+                        id="plusOne"
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={plusOne}
+                        onChange={(e) => setPlusOne(e.target.checked)}
+                    />
+                    <label htmlFor="plusOne" className="text-sm">
+                        Jeg tar med +1
+                    </label>
+                </div>
+
+                <textarea
+                    className="w-full border rounded px-3 py-2 min-h-[90px]"
+                    placeholder="Allergier (valgfritt) — du kan også legge inn korte kommentarer her"
+                    value={allergyNotes}
+                    onChange={(e) => setAllergyNotes(e.target.value)}
                 />
-                <label htmlFor="plusOne" className="text-sm">
-                    Jeg tar med +1
-                </label>
-            </div>
 
-            <input
-                className="w-full border rounded px-3 py-2"
-                placeholder="Allergier (valgfritt)"
-                value={allergies}
-                onChange={(e) => setAllergies(e.target.value)}
-            />
-
-            <div className="flex gap-2">
-                <button
-                    disabled={loading}
-                    className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
-                >
-                    {loading ? "Sender…" : "Send påmelding"}
-                </button>
-                <button type="button" className="px-4 py-2 rounded border" onClick={onCancel}>
-                    Lukk
-                </button>
-            </div>
-        </form>
+                <div className="flex gap-2">
+                    <button
+                        disabled={loading}
+                        className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+                    >
+                        {loading ? "Sender…" : "Send påmelding"}
+                    </button>
+                    <button
+                        type="button"
+                        className="px-4 py-2 rounded border"
+                        onClick={onCancel}
+                    >
+                        Avbryt
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 }
