@@ -8,18 +8,17 @@ const API =
     (process.env.NODE_ENV === "development"
         ? "http://localhost:4000"
         : "https://api.etterglod.no");
-// MOCK inntil backend/DB oppdateres:
-const welcomeScope: "open" | "family" | "private" = "open";
-const ceremonyWishes =
-    "Familien ønsker en rolig minnestund med enkel servering. Del gjerne små minner eller bilder.";
 
+// Midlertidig visningstekst/typer for welcome scope (kan komme fra DB senere)
 type WelcomeScope = "open" | "family" | "private";
-
 function welcomeLabel(scope: WelcomeScope) {
     switch (scope) {
-        case "open": return "Alle som ønsker å delta";
-        case "family": return "Familie og slekt";
-        case "private": return "Kun de nærmeste";
+        case "open":
+            return "Alle som ønsker å delta";
+        case "family":
+            return "Familie og slekt";
+        case "private":
+            return "Kun de nærmeste";
     }
 }
 
@@ -58,8 +57,6 @@ type Memorial = {
     notes: { id: number; author: string; text: string; createdAt: string }[];
 };
 
-type Mode = "none" | "rsvp" | "memory" | "done";
-
 export default function MemorialPage() {
     const params = useParams<{ slug: string }>();
     const slug = params?.slug;
@@ -67,8 +64,9 @@ export default function MemorialPage() {
     const [memorial, setMemorial] = useState<Memorial | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [mode, setMode] = useState<Mode>("none");
-    const [doneMsg, setDoneMsg] = useState<string>("");
+
+    // Toggle for å vise påmeldingsskjema inne i Minnestund-kortet
+    const [showRsvp, setShowRsvp] = useState(false);
 
     async function refresh() {
         if (!slug) return;
@@ -90,7 +88,7 @@ export default function MemorialPage() {
     }, [slug]);
 
     if (loading) return <main className="p-6 max-w-3xl mx-auto">Laster minneside…</main>;
-    if (error)   return <main className="p-6 max-w-3xl mx-auto">Feil: {error}</main>;
+    if (error) return <main className="p-6 max-w-3xl mx-auto">Feil: {error}</main>;
     if (!memorial) return <main className="p-6 max-w-3xl mx-auto">Ingen data funnet.</main>;
 
     const birth = memorial.birthDate ? new Date(memorial.birthDate).toLocaleDateString() : "";
@@ -118,8 +116,7 @@ export default function MemorialPage() {
                         </div>
                         {memorial.ceremony.address && (
                             <div>
-                                <span className="text-gray-600">Adresse:</span>{" "}
-                                {memorial.ceremony.address}
+                                <span className="text-gray-600">Adresse:</span> {memorial.ceremony.address}
                             </div>
                         )}
                         {memorial.ceremony.mapUrl && (
@@ -128,11 +125,7 @@ export default function MemorialPage() {
                             </a>
                         )}
                         {memorial.ceremony.livestream && (
-                            <a
-                                className="underline ml-2"
-                                href={memorial.ceremony.livestream}
-                                target="_blank"
-                            >
+                            <a className="underline ml-2" href={memorial.ceremony.livestream} target="_blank">
                                 Livestream
                             </a>
                         )}
@@ -142,9 +135,18 @@ export default function MemorialPage() {
                 )}
             </section>
 
-            {/* MINNESTUND (eget lokale) – MOCK nå */}
+            {/* MINNESTUND (eget lokale) – inntil DB/Backend er helt på plass bruker vi receptionMock for visning */}
             <section className="rounded border p-4 space-y-3">
-                <h2 className="font-medium text-lg">Minnestund</h2>
+                <div className="flex items-start justify-between">
+                    <h2 className="font-medium text-lg">Minnestund</h2>
+                    <button
+                        onClick={() => setShowRsvp((v) => !v)}
+                        className="px-3 py-2 rounded bg-black text-white hover:opacity-90"
+                    >
+                        {showRsvp ? "Lukk påmelding" : "Meld deg på"}
+                    </button>
+                </div>
+
                 <div className="text-sm space-y-1">
                     <div>
                         <span className="text-gray-600">Tid:</span>{" "}
@@ -155,8 +157,7 @@ export default function MemorialPage() {
                     </div>
                     {receptionMock.address && (
                         <div>
-                            <span className="text-gray-600">Adresse:</span>{" "}
-                            {receptionMock.address}
+                            <span className="text-gray-600">Adresse:</span> {receptionMock.address}
                         </div>
                     )}
                     <div>
@@ -175,83 +176,25 @@ export default function MemorialPage() {
                         </div>
                     )}
                 </div>
-            </section>
 
-            <section className="rounded border p-4 space-y-4">
-                <h2 className="font-medium text-lg">Hva ønsker du å gjøre?</h2>
-
-                {mode === "none" && (
-                    <div className="flex gap-3 flex-wrap">
-                        <button
-                            className="px-4 py-2 rounded bg-black text-white"
-                            onClick={() => setMode("rsvp")}
-                        >
-                            Meld deg på minnestund
-                        </button>
-                        <button
-                            className="px-4 py-2 rounded border"
-                            onClick={() => setMode("memory")}
-                        >
-                            Skriv et minneord
-                        </button>
-                    </div>
-                )}
-
-                {mode === "rsvp" && (
-                    <div className="space-y-3">
+                {/* Påmeldingsskjema inni Minnestund-kortet */}
+                {showRsvp && (
+                    <div className="mt-4 border-t pt-4">
                         <RSVPForm
                             slug={memorial.slug}
                             onSuccess={() => {
-                                setDoneMsg("Takk! Påmeldingen er registrert.");
-                                setMode("done");
-                                setTimeout(refresh, 200);
+                                // Vis enkel takkmelding i stedet for å navigere
+                                alert("Takk! Påmeldingen er registrert.");
+                                setShowRsvp(false);
+                                // optional: refresh(); // hvis du vil hente evt. teller senere
                             }}
-                            onCancel={() => setMode("none")}
+                            onCancel={() => setShowRsvp(false)}
                         />
-                    </div>
-                )}
-
-                {mode === "memory" && (
-                    <div className="space-y-3">
-                        <MemoryForm
-                            slug={memorial.slug}
-                            onSuccess={() => {
-                                setDoneMsg("Takk. Minneordet er mottatt for godkjenning.");
-                                setMode("done");
-                                setTimeout(refresh, 200);
-                            }}
-                            onCancel={() => setMode("none")}
-                        />
-                    </div>
-                )}
-
-                {mode === "done" && (
-                    <div className="rounded bg-green-50 border border-green-200 p-3 text-sm space-y-3">
-                        <div>{doneMsg}</div>
-                        <div className="flex gap-2 flex-wrap">
-                            <button
-                                className="px-3 py-1.5 rounded bg-black text-white"
-                                onClick={() => setMode("memory")}
-                            >
-                                Skriv et minneord
-                            </button>
-                            <button
-                                className="px-3 py-1.5 rounded border"
-                                onClick={() => setMode("rsvp")}
-                            >
-                                Meld deg på minnestund
-                            </button>
-                            <button
-                                className="px-3 py-1.5 rounded border"
-                                onClick={() => setMode("none")}
-                            >
-                                Til minnesiden
-                            </button>
-                        </div>
                     </div>
                 )}
             </section>
 
+            {/* Minneord-listing (kan stå, selv om innsendelse ikke er viktig nå) */}
             <section className="rounded border p-4">
                 <h2 className="font-medium text-lg mb-2">Minneord (godkjente)</h2>
                 {memorial.notes?.length ? (
@@ -259,7 +202,9 @@ export default function MemorialPage() {
                         {memorial.notes.map((n) => (
                             <li key={n.id} className="border rounded p-3">
                                 <p className="whitespace-pre-wrap">{n.text}</p>
-                                <p className="text-xs text-gray-500 mt-2">— {n.author} · {new Date(n.createdAt).toLocaleString()}</p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    — {n.author} · {new Date(n.createdAt).toLocaleString()}
+                                </p>
                             </li>
                         ))}
                     </ul>
@@ -271,7 +216,7 @@ export default function MemorialPage() {
     );
 }
 
-/* ------------------- Klientskjemaer ------------------- */
+/* ------------------- Påmeldingsskjema ------------------- */
 
 function RSVPForm({
                       slug,
@@ -284,8 +229,8 @@ function RSVPForm({
 }) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [count, setCount] = useState(1);
-    const [notes, setNotes] = useState("");
+    const [plusOne, setPlusOne] = useState(false);
+    const [allergies, setAllergies] = useState("");
     const [msg, setMsg] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -297,12 +242,32 @@ function RSVPForm({
             const res = await fetch(`${API}/api/memorials/${slug}/attendance`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, count, notes }),
+                body: JSON.stringify({
+                    name,
+                    email,
+                    plusOne,
+                    allergies: allergies || undefined,
+                }),
             });
-            const data = await res.json();
-            if (!res.ok) { setMsg(data.error ?? "Noe gikk galt."); return; }
+
+            // Prøv å tolke JSON, men tåle tom body (204/201 uten body)
+            let data: any = {};
+            try {
+                data = await res.json();
+            } catch {
+                /* ignorér tom respons */
+            }
+
+            if (!res.ok) {
+                setMsg(data?.error ?? `Noe gikk galt (${res.status}).`);
+                return;
+            }
+
             onSuccess?.();
-            setName(""); setEmail(""); setCount(1); setNotes("");
+            setName("");
+            setEmail("");
+            setPlusOne(false);
+            setAllergies("");
         } catch (e: any) {
             setMsg(String(e));
         } finally {
@@ -313,65 +278,55 @@ function RSVPForm({
     return (
         <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
-                <input className="border rounded px-3 py-2" placeholder="Navn" value={name} onChange={e=>setName(e.target.value)} />
-                <input className="border rounded px-3 py-2" placeholder="E-post" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
+                <input
+                    className="border rounded px-3 py-2"
+                    placeholder="Navn"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                />
+                <input
+                    className="border rounded px-3 py-2"
+                    placeholder="E-post"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-                <input className="border rounded px-3 py-2" placeholder="Antall" type="number" min={1} value={count} onChange={e=>setCount(parseInt(e.target.value || "1", 10))} />
-                <input className="border rounded px-3 py-2" placeholder="Allergier / notater (valgfritt)" value={notes} onChange={e=>setNotes(e.target.value)} />
+
+            <div className="flex items-center gap-2">
+                <input
+                    id="plusOne"
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={plusOne}
+                    onChange={(e) => setPlusOne(e.target.checked)}
+                />
+                <label htmlFor="plusOne" className="text-sm">
+                    Jeg tar med +1
+                </label>
             </div>
+
+            <input
+                className="w-full border rounded px-3 py-2"
+                placeholder="Allergier (valgfritt)"
+                value={allergies}
+                onChange={(e) => setAllergies(e.target.value)}
+            />
+
             {msg && <p className="text-sm text-red-600">{msg}</p>}
+
             <div className="flex gap-2">
-                <button disabled={loading} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">{loading ? "Sender…" : "Send påmelding"}</button>
-                <button type="button" className="px-4 py-2 rounded border" onClick={onCancel}>Avbryt</button>
-            </div>
-        </form>
-    );
-}
-
-function MemoryForm({
-                        slug,
-                        onSuccess,
-                        onCancel,
-                    }: {
-    slug: string;
-    onSuccess?: () => void;
-    onCancel?: () => void;
-}) {
-    const [author, setAuthor] = useState("");
-    const [text, setText] = useState("");
-    const [msg, setMsg] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setMsg(null);
-        try {
-            const res = await fetch(`${API}/api/memorials/${slug}/memory`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ author, text }),
-            });
-            const data = await res.json();
-            if (!res.ok) { setMsg(data.error ?? "Noe gikk galt."); return; }
-            onSuccess?.();
-            setAuthor(""); setText("");
-        } catch (e: any) {
-            setMsg(String(e));
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    return (
-        <form onSubmit={onSubmit} className="space-y-3">
-            <input className="w-full border rounded px-3 py-2" placeholder="Ditt navn" value={author} onChange={e=>setAuthor(e.target.value)} />
-            <textarea className="w-full border rounded px-3 py-2 min-h-[110px]" placeholder="Skriv et minneord…" value={text} onChange={e=>setText(e.target.value)} />
-            {msg && <p className="text-sm text-red-600">{msg}</p>}
-            <div className="flex gap-2">
-                <button disabled={loading} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">{loading ? "Sender…" : "Send minneord"}</button>
-                <button type="button" className="px-4 py-2 rounded border" onClick={onCancel}>Avbryt</button>
+                <button
+                    disabled={loading}
+                    className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+                >
+                    {loading ? "Sender…" : "Send påmelding"}
+                </button>
+                <button type="button" className="px-4 py-2 rounded border" onClick={onCancel}>
+                    Avbryt
+                </button>
             </div>
         </form>
     );
