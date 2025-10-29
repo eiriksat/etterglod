@@ -4,16 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+// Robust API-base (aldri undefined)
 const API =
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === "development"
-        ? "http://localhost:4000"
-        : "https://api.etterglod.no");
+    process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")
+        ? process.env.NEXT_PUBLIC_API_URL
+        : (typeof window === "undefined" ? "http://localhost:4000" : "https://api.etterglod.no");
 
 const TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? "";
 const ADMIN_GUID = process.env.NEXT_PUBLIC_ADMIN_GUID ?? "";
 
-// Valgfritt tak foreløpig (kan flyttes til DB senere)
+// Midlertidig tak (kan flyttes til DB senere)
 const CAP = 60;
 
 type Item = {
@@ -27,7 +27,7 @@ type Item = {
 };
 
 export default function AdminAttendancePage() {
-    // Støtt både path-param og fallback til ?k=… hvis du vil dele som query
+    // ✅ Punkt 2: Les både key og slug fra ruten (støtt også ?k= som fallback)
     const params = useParams<{ key: string; slug: string }>();
     const search = useSearchParams();
     const keyParam = params?.key || search.get("k") || "";
@@ -69,7 +69,7 @@ export default function AdminAttendancePage() {
     }, [slug]);
 
     const { totalGuests, plusOnes, remaining } = useMemo(() => {
-        const plus = items.filter(i => i.plusOne).length;
+        const plus = items.filter((i) => i.plusOne).length;
         const total = items.length + plus; // 1 per rad + 1 for hver +1
         return {
             totalGuests: total,
@@ -84,6 +84,7 @@ export default function AdminAttendancePage() {
                 <h1 className="text-xl font-semibold">Påmeldinger – {slug}</h1>
                 <div className="flex gap-3">
                     <Link className="underline" href={`/memorial/${slug}`}>Åpne minneside</Link>
+                    {/* Merk: Direkte CSV-lenke vil ikke sende Authorization-header fra browseren */}
                     <a
                         className="underline"
                         href={`${API}/api/memorials/${slug}/attendance.csv`}
@@ -126,7 +127,7 @@ export default function AdminAttendancePage() {
                             </tr>
                             </thead>
                             <tbody>
-                            {items.map(i => (
+                            {items.map((i) => (
                                 <tr key={i.id} className="border-b">
                                     <td className="p-2">{i.name}</td>
                                     <td className="p-2">{i.email}</td>
