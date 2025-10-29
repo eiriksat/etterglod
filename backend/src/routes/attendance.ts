@@ -4,6 +4,9 @@ import { requireAdmin } from "../middleware/admin.js";
 
 export const attendance = Router();
 
+// Myk kapasitet (kan flyttes til DB senere, f.eks. Memorial.capacity)
+const CAPACITY = 60;
+
 /** Hjelpere */
 function toBoolean(v: unknown): boolean {
     if (typeof v === "boolean") return v;
@@ -23,6 +26,7 @@ function csvEscape(v: string): string {
 /**
  * POST /api/memorials/:slug/attendance
  * Offentlig påmelding: { name, email, plusOne:boolean|("true"/"1"/"on"), allergies?:string, notes?:string }
+ * Ved overkapasitet markeres raden som waitlisted=true (ingen hard blokkering).
  */
 attendance.post("/memorials/:slug/attendance", async (req, res) => {
     try {
@@ -36,7 +40,6 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
 
         if (nameStr.length < 2) errors.name = "Navn må være minst 2 tegn.";
         if (!isEmail(emailStr)) errors.email = "Ugyldig e-post.";
-        // Vi krever at feltet finnes, men tillater "false"
         if (plusOne === undefined) errors.plusOne = "plusOne må være true/false.";
 
         if (Object.keys(errors).length) {
@@ -46,6 +49,15 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
         const mem = await prisma.memorial.findUnique({ where: { slug } });
         if (!mem) return res.status(404).json({ ok: false, error: "Memorial not found" });
 
+        // Tell bekreftede (ikke venteliste) mot kapasitet
+        const confirmed = await prisma.attendance.findMany({
+            where: { memorialId: mem.id, waitlisted: false },
+            select: { plusOne: true },
+        });
+        const totalConfirmed = confirmed.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
+        const incoming = 1 + (plusOneBool ? 1 : 0);
+        const willExceed = totalConfirmed + incoming > CAPACITY;
+
         const item = await prisma.attendance.create({
             data: {
                 memorialId: mem.id,
@@ -54,11 +66,19 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
                 plusOne: plusOneBool,
                 allergies: allergies ? String(allergies).trim() : null,
                 notes: notes ? String(notes).trim() : null,
+                waitlisted: willExceed, // 👈 venteliste ved overkapasitet
             },
-            select: { id: true },
+            select: { id: true, waitlisted: true },
         });
 
-        return res.status(201).json({ ok: true, item });
+        return res.status(201).json({
+            ok: true,
+            item,
+            waitlisted: item.waitlisted,
+            message: item.waitlisted
+                ? "Arrangementet er fulltegnet, men interessen din er registrert. Du får beskjed hvis det blir ledig kapasitet."
+                : "Påmeldingen er registrert.",
+        });
     } catch (err) {
         console.error("POST /attendance failed:", err);
         return res.status(500).json({ ok: false, error: "Serverfeil" });
@@ -85,6 +105,7 @@ attendance.get("/memorials/:slug/attendance", requireAdmin, async (req, res) => 
                 plusOne: true,
                 allergies: true,
                 notes: true,
+                waitlisted: true,
                 createdAt: true,
             },
         });
@@ -98,7 +119,7 @@ attendance.get("/memorials/:slug/attendance", requireAdmin, async (req, res) => 
 
 /**
  * (Admin) GET /api/memorials/:slug/attendance.csv
- * CSV-eksport. Kolonner: name,email,plusOne,guests,allergies,notes,createdAt
+ * CSV: name,email,plusOne,guests,allergies,notes,waitlisted,createdAt
  * guests = 1 + (plusOne ? 1 : 0)
  */
 attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res) => {
@@ -116,11 +137,12 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
                 plusOne: true,
                 allergies: true,
                 notes: true,
+                waitlisted: true,
                 createdAt: true,
             },
         });
 
-        const header = ["name", "email", "plusOne", "guests", "allergies", "notes", "createdAt"];
+        const header = ["name", "email", "plusOne", "guests", "allergies", "notes", "waitlisted", "createdAt"];
         const lines = [header.join(",")].concat(
             items.map((i) => {
                 const guests = 1 + (i.plusOne ? 1 : 0);
@@ -131,6 +153,7 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
                     String(guests),
                     i.allergies ?? "",
                     i.notes ?? "",
+                    String(i.waitlisted),
                     i.createdAt.toISOString(),
                 ]
                     .map((v) => csvEscape(v))
@@ -148,9 +171,9 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
 });
 
 /**
- * (Valgfritt) offentlig oppsummering
- * GET /api/memorials/:slug/attendance/summary  -> { total, entries }
- * total = antall personer inkl. +1
+ * Offentlig oppsummering
+ * GET /api/memorials/:slug/attendance/summary
+ * -> { ok, totalConfirmed, totalWaitlisted, entriesConfirmed, entriesWaitlisted, capacity }
  */
 attendance.get("/memorials/:slug/attendance/summary", async (req, res) => {
     try {
@@ -160,11 +183,23 @@ attendance.get("/memorials/:slug/attendance/summary", async (req, res) => {
 
         const items = await prisma.attendance.findMany({
             where: { memorialId: mem.id },
-            select: { plusOne: true },
+            select: { plusOne: true, waitlisted: true },
         });
 
-        const total = items.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
-        res.json({ ok: true, total, entries: items.length });
+        const confirmed = items.filter(i => !i.waitlisted);
+        const waitlisted = items.filter(i => i.waitlisted);
+
+        const totalConfirmed = confirmed.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
+        const totalWaitlisted = waitlisted.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
+
+        res.json({
+            ok: true,
+            totalConfirmed,
+            totalWaitlisted,
+            entriesConfirmed: confirmed.length,
+            entriesWaitlisted: waitlisted.length,
+            capacity: CAPACITY,
+        });
     } catch (err) {
         console.error("GET /attendance/summary failed:", err);
         return res.status(500).json({ ok: false, error: "Serverfeil" });
