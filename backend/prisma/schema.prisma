@@ -22,6 +22,7 @@ model Memorial {
   obituaryNote String? // f.eks. "sovnet stille inn ..."
   bio          String?
   imageUrl     String?
+  shortCode    String?   @unique
 
   // Seremoni i kirke
   ceremony Ceremony?
