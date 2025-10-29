@@ -300,25 +300,31 @@ function RSVPForm({
                     name,
                     email,
                     plusOne,
-                    allergies: allergyNotes || undefined, // backend-feltet heter "allergies"
+                    allergies: allergyNotes || undefined,
                 }),
             });
 
-            // Prøv å lese JSON, men tolerer tom body
             let data: any = {};
-            try { data = await res.json(); } catch {}
+            try {
+                data = await res.json();
+            } catch {
+                /* ignorér tom respons */
+            }
 
             if (!res.ok) {
-                setErrMsg(
-                    typeof data?.error === "string"
-                        ? data.error
-                        : `Noe gikk galt (${res.status}).`
-                );
+                setErrMsg(data?.error ?? `Noe gikk galt (${res.status}).`);
                 return;
             }
 
-            // OK
-            setOkMsg("Takk! Påmeldingen er registrert.");
+            // 👇 Her kommer den smarte meldingen basert på ventelisteflagget:
+            const text = data?.waitlisted
+                ? "Arrangementet er fulltegnet, men interessen din er registrert. Du får beskjed hvis det blir ledig kapasitet."
+                : "Takk! Påmeldingen er registrert.";
+
+            // Sett meldingen i grønn boks:
+            setOkMsg(text);
+
+            // Nullstill skjema:
             setName("");
             setEmail("");
             setPlusOne(false);
