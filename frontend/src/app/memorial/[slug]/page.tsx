@@ -251,9 +251,6 @@ export default function MemorialPage() {
                     <div className="mt-4 border-t pt-4">
                         <RSVPForm
                             slug={memorial.slug}
-                            onSuccess={async () => {
-                                await refresh();
-                            }}
                             onCancel={() => setShowRsvp(false)}
                         />
                     </div>
