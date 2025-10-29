@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-// ✅ Robust API-base (alltid absolutt URL)
+// ALLTID bruk denne varianten
 const API =
     process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")
         ? process.env.NEXT_PUBLIC_API_URL
