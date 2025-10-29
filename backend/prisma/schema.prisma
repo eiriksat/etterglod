@@ -58,16 +58,16 @@ model Reception {
 }
 
 model Attendance {
-  id            Int      @id @default(autoincrement())
-  memorialId    Int
-  name          String
-  email         String
-  count         Int      @default(1)
-  notes         String?
-  wantsToSpeak  Boolean  @default(false)
-  relationsJson String?
-  createdAt     DateTime @default(now())
-  Memorial      Memorial @relation(fields: [memorialId], references: [id])
+  id         Int       @id @default(autoincrement())
+  memorialId Int
+  name       String
+  email      String
+  plusOne    Boolean   @default(false) // ✅ erstatter "count"
+  allergies  String?                // ✅ nytt
+  notes      String?                // (valgfritt, behold)
+  createdAt  DateTime  @default(now())
+
+  Memorial   Memorial  @relation(fields: [memorialId], references: [id])
 
   @@index([memorialId])
 }
