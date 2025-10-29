@@ -4,14 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-// Robust API-base (aldri undefined)
-const API =
-    process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith("http")
-        ? process.env.NEXT_PUBLIC_API_URL
-        : (typeof window === "undefined" ? "http://localhost:4000" : "https://api.etterglod.no");
+/** Stabil API-base: aldri undefined eller relativ */
+const API = (() => {
+    const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+    // Server-render (dev) -> localhost, ellers bruk env hvis gyldig, fallback prod
+    if (typeof window === "undefined") {
+        if (process.env.NODE_ENV === "development") return "http://localhost:4000";
+        return env.startsWith("http") ? env : "https://api.etterglod.no";
+    }
+    // I browseren -> bruk env hvis gyldig, ellers prod
+    return env.startsWith("http") ? env : "https://api.etterglod.no";
+})();
 
-const TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? "";
-const ADMIN_GUID = process.env.NEXT_PUBLIC_ADMIN_GUID ?? "";
+const TOKEN = (process.env.NEXT_PUBLIC_ADMIN_TOKEN ?? "").trim();
+const RAW_GUID = (process.env.NEXT_PUBLIC_ADMIN_GUID ?? "");
+const ADMIN_GUID = RAW_GUID.trim(); // fjern utilsiktede spaces/linjeskift
 
 // Midlertidig tak (kan flyttes til DB senere)
 const CAP = 60;
@@ -27,20 +34,31 @@ type Item = {
 };
 
 export default function AdminAttendancePage() {
-    // ✅ Punkt 2: Les både key og slug fra ruten (støtt også ?k= som fallback)
+    // Les både key og slug fra ruten (støtt også ?k= som fallback)
     const params = useParams<{ key: string; slug: string }>();
     const search = useSearchParams();
-    const keyParam = params?.key || search.get("k") || "";
+    const keyParam = ((params?.key as string) || search.get("k") || "").trim();
     const slug = params?.slug;
 
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
 
-    // Enkel “skjuling” bak GUID i URL
+    // Liten, trygg debug-banner (viser bare prefix/suffix, ikke full GUID)
+    const DebugBanner = () => (
+        <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+            <div>path: <code>{typeof window !== "undefined" ? window.location.pathname : ""}</code></div>
+            <div>keyParam: <code>{keyParam.slice(0, 8)}…{keyParam.slice(-4)}</code> (len={keyParam.length})</div>
+            <div>ADMIN_GUID: <code>{ADMIN_GUID.slice(0, 8)}…{ADMIN_GUID.slice(-4)}</code> (len={ADMIN_GUID.length})</div>
+            <div>API: <code>{API}</code></div>
+        </div>
+    );
+
+    // Enkel “skjuling” bak GUID i URL – blokker alt tidlig hvis mismatch
     if (!keyParam || !ADMIN_GUID || keyParam !== ADMIN_GUID) {
         return (
-            <main className="p-6 max-w-3xl mx-auto">
+            <main className="p-6 max-w-3xl mx-auto space-y-3">
+                <DebugBanner />
                 <h1 className="text-xl font-semibold">404</h1>
                 <p>Finner ikke siden.</p>
             </main>
@@ -49,21 +67,24 @@ export default function AdminAttendancePage() {
 
     useEffect(() => {
         (async () => {
-            // Ikke fetch hvis GUID ikke matcher
             if (!slug) return;
-            if (!ADMIN_GUID || keyParam !== ADMIN_GUID) return;
 
             setLoading(true);
             setErr(null);
             try {
-                // Debug – ta bort når grønt
-                console.debug("[ADMIN/ATTENDANCE] fetch", { API, slug, key: keyParam.slice(0, 6) + "…" });
+                // Debug (trygt): viser ikke hele guid/token
+                console.debug("[ADMIN/ATTENDANCE] fetch", {
+                    API,
+                    slug,
+                    keyPrefix: keyParam.slice(0, 6),
+                });
 
                 const res = await fetch(`${API}/api/memorials/${slug}/attendance`, {
                     headers: { Authorization: `Bearer ${TOKEN}` },
                     cache: "no-store",
                 });
-                const json = await res.json();
+
+                const json = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(json?.error || `Feil (${res.status})`);
                 setItems(json.items ?? []);
             } catch (e: any) {
@@ -72,7 +93,7 @@ export default function AdminAttendancePage() {
                 setLoading(false);
             }
         })();
-    }, [slug, keyParam]); // 👈 inkluder keyParam
+    }, [slug, keyParam]); // viktig: trigge på keyParam også
 
     const { totalGuests, plusOnes, remaining } = useMemo(() => {
         const plus = items.filter((i) => i.plusOne).length;
@@ -86,10 +107,15 @@ export default function AdminAttendancePage() {
 
     return (
         <main className="p-6 max-w-4xl mx-auto space-y-6">
+            {/* Fjern DebugBanner når alt er grønt */}
+            <DebugBanner />
+
             <header className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Påmeldinger – {slug}</h1>
                 <div className="flex gap-3">
-                    <Link className="underline" href={`/memorial/${slug}`}>Åpne minneside</Link>
+                    <Link className="underline" href={`/memorial/${slug}`}>
+                        Åpne minneside
+                    </Link>
                     {/* Merk: Direkte CSV-lenke vil ikke sende Authorization-header fra browseren */}
                     <a
                         className="underline"
@@ -105,9 +131,15 @@ export default function AdminAttendancePage() {
             <section className="rounded border p-4">
                 <h2 className="font-medium mb-2">Oppsummering</h2>
                 <div className="text-sm grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div><span className="text-gray-600">Antall påmeldte (rader):</span> {items.length}</div>
-                    <div><span className="text-gray-600">Antall +1:</span> {plusOnes}</div>
-                    <div><span className="text-gray-600">Totalt antall gjester:</span> {totalGuests} / {CAP}</div>
+                    <div>
+                        <span className="text-gray-600">Antall påmeldte (rader):</span> {items.length}
+                    </div>
+                    <div>
+                        <span className="text-gray-600">Antall +1:</span> {plusOnes}
+                    </div>
+                    <div>
+                        <span className="text-gray-600">Totalt antall gjester:</span> {totalGuests} / {CAP}
+                    </div>
                 </div>
             </section>
 
