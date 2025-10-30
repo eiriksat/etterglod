@@ -1,48 +1,35 @@
-// Server component: short URL → redirect til /memorial/[slug]
+// app/[code]/page.tsx (server-komponent)
 import { notFound, redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic"; // aldri prerender
-export const revalidate = 0;
+type ShortLookup =
+    | { ok: true; slug: string }
+    | { ok: false; error?: string };
 
-type ShortLookup = { ok: boolean; slug?: string; error?: string };
+export const dynamic = "force-dynamic"; // unngå cache i dev/edge
 
-function apiBase(): string {
-    const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
-    // På server: bruk env hvis gyldig; ellers prod fallback
-    return env.startsWith("http") ? env : "https://api.etterglod.no";
-}
+const API =
+    process.env.NEXT_PUBLIC_API_URL?.startsWith("http")
+        ? process.env.NEXT_PUBLIC_API_URL!
+        : "http://localhost:4000";
 
-export default async function ShortRedirect({
-                                                params,
-                                            }: {
-    params: { code: string };
-}) {
-    const code = String(params?.code || "").trim().toLowerCase();
+export default async function ShortRedirect(
+    props: { params: Promise<{ code: string }> } // Next 15: params er en Promise
+) {
+    const { code: raw } = await props.params;
+    const code = (raw ?? "").trim().toLowerCase();
 
-    // Korte sanity-sjekker – holdes liberale (tillater a–z, 0–9 og bindestrek)
+    // enkel validering
     if (!code || !/^[a-z0-9-]{2,64}$/.test(code)) {
         notFound();
     }
 
-    const API = apiBase();
-
-    const res = await fetch(`${API}/api/short/${encodeURIComponent(code)}`, {
-        // Viktig: ellers kan Next cache 404-responsen
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        if (res.status === 404) {
-            notFound();
-        }
-        throw new Error(`Short lookup failed (${res.status})`);
-    }
+    const res = await fetch(`${API}/api/short/${code}`, { cache: "no-store" });
+    if (res.status === 404) notFound();
+    if (!res.ok) throw new Error(`Short lookup failed (${res.status})`);
 
     const data = (await res.json()) as ShortLookup;
-    if (!data?.ok || !data.slug) {
-        notFound();
-    }
+    if (!("ok" in data) || !data.ok || !data.slug) notFound();
 
-    // Intern redirect til “ekte” memorial-rute
+    // Viktig: server-side redirect (gir 307/308 i nettleseren)
     redirect(`/memorial/${data.slug}`);
 }
