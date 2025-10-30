@@ -107,7 +107,8 @@ export default function MemorialPage() {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
+    const [imgLoaded, setImgLoaded] = useState(false);
+    
     // Påmelding inne i Minnestund-kortet
     const [showRsvp, setShowRsvp] = useState(false);
 
@@ -166,35 +167,51 @@ export default function MemorialPage() {
 
     return (
         <main className="p-6 max-w-3xl mx-auto space-y-8">
-            <header className="space-y-4">
-                {/* Bilde (vises kun hvis backend har imageUrl) */}
-                {memorial.imageUrl && (
-                    <>
-                        <img
-                            src={memorial.imageUrl}
-                            alt={`Portrett av ${memorial.name}`}
-                            className="w-full max-h-[420px] object-cover rounded-lg shadow"
-                            loading="eager"
-                        />
-                        <div className="text-xs text-white select-text">
-                            img: {memorial.imageUrl}
-                        </div>
-                    </>
-                )}
-
+            <header className="space-y-5">
+                {/* Tittel + dato */}
                 <div className="space-y-2">
-                    <h1 className="text-3xl font-semibold">{memorial.name}</h1>
+                    <h1 className="text-3xl font-semibold tracking-tight">{memorial.name}</h1>
                     <p className="text-gray-600">
                         {[formatDatoKort(memorial.birthDate), formatDatoKort(memorial.deathDate)]
                             .filter(Boolean)
                             .join(" – ")}
                     </p>
-                    {memorial.bio && (
-                        <p className="mt-2 leading-relaxed whitespace-pre-wrap">
-                            {memorial.bio}
-                        </p>
-                    )}
                 </div>
+
+                {/* Bilde */}
+                {memorial.imageUrl && (
+                    <figure className="group">
+                        <div
+                            className={[
+                                "relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm",
+                                "aspect-[4/3] sm:aspect-[16/9] bg-gradient-to-b from-gray-100 to-gray-200",
+                            ].join(" ")}
+                        >
+                            <img
+                                src={memorial.imageUrl}
+                                alt={`Portrett av ${memorial.name}`}
+                                className={[
+                                    "absolute inset-0 h-full w-full object-cover",
+                                    imgLoaded ? "opacity-100" : "opacity-0",
+                                    "transition-opacity duration-500",
+                                ].join(" ")}
+                                loading="eager"
+                                decoding="async"
+                                onLoad={() => setImgLoaded(true)}
+                            />
+
+                            {/* Subtil gradient nederst for mer “dybde” */}
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/10 to-transparent" />
+                        </div>
+                    </figure>
+                )}
+
+                {/* Minneord / bio */}
+                {memorial.bio && (
+                    <p className="leading-relaxed whitespace-pre-wrap text-[17px] text-gray-800">
+                        {memorial.bio}
+                    </p>
+                )}
             </header>
 
             {/* BISETTELSE */}
