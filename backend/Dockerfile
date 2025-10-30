@@ -7,7 +7,7 @@ RUN npm install
 COPY . .
 
 # Bygg TS og generer Prisma-klient
-RUN npm run build || true
+RUN npm run build
 RUN npx prisma generate
 
 ENV NODE_ENV=production
