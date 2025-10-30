@@ -166,16 +166,30 @@ export default function MemorialPage() {
 
     return (
         <main className="p-6 max-w-3xl mx-auto space-y-8">
-            <header className="space-y-2">
-                <h1 className="text-3xl font-semibold">{memorial.name}</h1>
-                <p className="text-gray-600">
-                    {[birth, death].filter(Boolean).join(" – ")}
-                </p>
-                {memorial.bio && (
-                    <p className="mt-2 leading-relaxed whitespace-pre-wrap">
-                        {memorial.bio}
-                    </p>
+            <header className="space-y-4">
+                {/* Bilde (vises kun hvis backend har imageUrl) */}
+                {memorial.imageUrl && (
+                    <img
+                        src={memorial.imageUrl}
+                        alt={`Portrett av ${memorial.name}`}
+                        className="w-full max-h-[420px] object-cover rounded-lg shadow"
+                        loading="eager"
+                    />
                 )}
+
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-semibold">{memorial.name}</h1>
+                    <p className="text-gray-600">
+                        {[formatDatoKort(memorial.birthDate), formatDatoKort(memorial.deathDate)]
+                            .filter(Boolean)
+                            .join(" – ")}
+                    </p>
+                    {memorial.bio && (
+                        <p className="mt-2 leading-relaxed whitespace-pre-wrap">
+                            {memorial.bio}
+                        </p>
+                    )}
+                </div>
             </header>
 
             {/* BISETTELSE */}
