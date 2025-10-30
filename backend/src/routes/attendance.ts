@@ -2,10 +2,11 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAdmin } from "../middleware/admin.js";
 
+
 export const attendance = Router();
 
-// Myk kapasitet (kan flyttes til DB senere, f.eks. Memorial.capacity)
-const CAPACITY = 60;
+// Myk kapasitet (kan flyttes til DB senere)
+const CAPACITY = 118;
 
 /** Hjelpere */
 function toBoolean(v: unknown): boolean {
@@ -19,13 +20,12 @@ function isEmail(s: unknown): boolean {
 }
 
 function csvEscape(v: string): string {
-    // erstatt CR/LF og doble anførselstegn
     return `"${v.replaceAll('"', '""').replace(/\r?\n/g, " ")}"`;
 }
 
 /**
  * POST /api/memorials/:slug/attendance
- * Offentlig påmelding: { name, email, plusOne:boolean|("true"/"1"/"on"), allergies?:string, notes?:string }
+ * Offentlig påmelding: { name, email, plusOne, allergies?, notes? }
  * Ved overkapasitet markeres raden som waitlisted=true (ingen hard blokkering).
  */
 attendance.post("/memorials/:slug/attendance", async (req, res) => {
@@ -54,7 +54,12 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
             where: { memorialId: mem.id, waitlisted: false },
             select: { plusOne: true },
         });
-        const totalConfirmed = confirmed.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
+
+        const totalConfirmed = confirmed.reduce(
+            (sum: number, a: { plusOne: boolean }) => sum + 1 + (a.plusOne ? 1 : 0),
+            0
+        );
+
         const incoming = 1 + (plusOneBool ? 1 : 0);
         const willExceed = totalConfirmed + incoming > CAPACITY;
 
@@ -66,7 +71,7 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
                 plusOne: plusOneBool,
                 allergies: allergies ? String(allergies).trim() : null,
                 notes: notes ? String(notes).trim() : null,
-                waitlisted: willExceed, // 👈 venteliste ved overkapasitet
+                waitlisted: willExceed,
             },
             select: { id: true, waitlisted: true },
         });
@@ -119,8 +124,6 @@ attendance.get("/memorials/:slug/attendance", requireAdmin, async (req, res) => 
 
 /**
  * (Admin) GET /api/memorials/:slug/attendance.csv
- * CSV: name,email,plusOne,guests,allergies,notes,waitlisted,createdAt
- * guests = 1 + (plusOne ? 1 : 0)
  */
 attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res) => {
     try {
@@ -142,23 +145,43 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
             },
         });
 
-        const header = ["name", "email", "plusOne", "guests", "allergies", "notes", "waitlisted", "createdAt"];
+        const header = [
+            "name",
+            "email",
+            "plusOne",
+            "guests",
+            "allergies",
+            "notes",
+            "waitlisted",
+            "createdAt",
+        ];
+
         const lines = [header.join(",")].concat(
-            items.map((i) => {
-                const guests = 1 + (i.plusOne ? 1 : 0);
-                return [
-                    i.name,
-                    i.email,
-                    String(i.plusOne),
-                    String(guests),
-                    i.allergies ?? "",
-                    i.notes ?? "",
-                    String(i.waitlisted),
-                    i.createdAt.toISOString(),
-                ]
-                    .map((v) => csvEscape(v))
-                    .join(",");
-            }),
+            items.map(
+                (i: {
+                    name: string;
+                    email: string;
+                    plusOne: boolean;
+                    allergies: string | null;
+                    notes: string | null;
+                    waitlisted: boolean;
+                    createdAt: Date;
+                }) => {
+                    const guests = 1 + (i.plusOne ? 1 : 0);
+                    return [
+                        i.name,
+                        i.email,
+                        String(i.plusOne),
+                        String(guests),
+                        i.allergies ?? "",
+                        i.notes ?? "",
+                        String(i.waitlisted),
+                        i.createdAt.toISOString(),
+                    ]
+                        .map((v) => csvEscape(v))
+                        .join(",");
+                }
+            )
         );
 
         res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -172,8 +195,6 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
 
 /**
  * Offentlig oppsummering
- * GET /api/memorials/:slug/attendance/summary
- * -> { ok, totalConfirmed, totalWaitlisted, entriesConfirmed, entriesWaitlisted, capacity }
  */
 attendance.get("/memorials/:slug/attendance/summary", async (req, res) => {
     try {
@@ -186,11 +207,17 @@ attendance.get("/memorials/:slug/attendance/summary", async (req, res) => {
             select: { plusOne: true, waitlisted: true },
         });
 
-        const confirmed = items.filter(i => !i.waitlisted);
-        const waitlisted = items.filter(i => i.waitlisted);
+        const confirmed = items.filter((i: { waitlisted: boolean }) => !i.waitlisted);
+        const waitlisted = items.filter((i: { waitlisted: boolean }) => i.waitlisted);
 
-        const totalConfirmed = confirmed.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
-        const totalWaitlisted = waitlisted.reduce((sum, a) => sum + 1 + (a.plusOne ? 1 : 0), 0);
+        const totalConfirmed = confirmed.reduce(
+            (sum: number, a: { plusOne: boolean }) => sum + 1 + (a.plusOne ? 1 : 0),
+            0
+        );
+        const totalWaitlisted = waitlisted.reduce(
+            (sum: number, a: { plusOne: boolean }) => sum + 1 + (a.plusOne ? 1 : 0),
+            0
+        );
 
         res.json({
             ok: true,
