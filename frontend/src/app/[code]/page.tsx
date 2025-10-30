@@ -1,42 +1,45 @@
-// frontend/src/app/[code]/page.tsx
-import { redirect, notFound } from "next/navigation";
+// Server component: short URL → redirect til /memorial/[slug]
+import { notFound, redirect } from "next/navigation";
 
-/** Stabil API-base (server-side) */
-function apiBase() {
+export const dynamic = "force-dynamic"; // aldri prerender
+export const revalidate = 0;
+
+type ShortLookup = { ok: boolean; slug?: string; error?: string };
+
+function apiBase(): string {
     const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
-    if (env.startsWith("http")) return env;
-    // fallback – prod
-    return "https://api.etterglod.no";
+    // På server: bruk env hvis gyldig; ellers prod fallback
+    return env.startsWith("http") ? env : "https://api.etterglod.no";
 }
 
-type ShortLookup = { ok: true; slug: string } | { ok: false; error: string };
-
-export default async function ShortCodePage({
+export default async function ShortRedirect({
                                                 params,
                                             }: {
     params: { code: string };
 }) {
-    const code = (params?.code || "").trim().toLowerCase();
-    if (!code) notFound();
+    const code = String(params?.code || "").trim().toLowerCase();
+
+    // Korte sanity-sjekker – holdes liberale (tillater a–z, 0–9 og bindestrek)
+    if (!code || !/^[a-z0-9-]{2,64}$/.test(code)) {
+        notFound();
+    }
 
     const API = apiBase();
 
-    // Ikke cache – vi vil alltid ha fersk mapping
     const res = await fetch(`${API}/api/short/${encodeURIComponent(code)}`, {
+        // Viktig: ellers kan Next cache 404-responsen
         cache: "no-store",
-        // kort timeout via Next.js runtime (kan droppes om ønskelig)
-        // Next 14+ støtter { next: { revalidate: 0 } } også
     });
 
     if (!res.ok) {
-        // 404 fra API -> vis 404-side i frontend
-        if (res.status === 404) notFound();
-        // annet -> kast feil for å se i Vercel-logs
+        if (res.status === 404) {
+            notFound();
+        }
         throw new Error(`Short lookup failed (${res.status})`);
     }
 
     const data = (await res.json()) as ShortLookup;
-    if (!("ok" in data) || !data.ok || !data.slug) {
+    if (!data?.ok || !data.slug) {
         notFound();
     }
 
