@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 
 /** Stabil API-base: aldri undefined, aldri relativ */
@@ -278,52 +278,46 @@ export default function MemorialPage() {
                     </p>
                 )}
             </section>
-
+            
             {/* MINNESTUND – visning + påmelding */}
-            <section className="rounded-xl border p-4 bg-white/80 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800 backdrop-blur-sm space-y-3">
+            <section className="rounded border p-4 space-y-3">
                 <div className="flex items-start justify-between">
                     <h2 className="font-medium text-lg">Minnestund</h2>
                     <button
                         onClick={() => setShowRsvp((v) => !v)}
-                        className="px-3 py-2 rounded-lg bg-black text-white hover:opacity-90 dark:bg-white dark:text-black"
+                        className="px-3 py-2 rounded bg-black text-white hover:opacity-90"
                     >
                         {showRsvp ? "Lukk påmelding" : "Meld deg på"}
                     </button>
                 </div>
 
-                <ReceptionBlock reception={memorial.reception} />
-
-                {/* Hvis vi har oppsummering, vis litt status */}
-                {summary && (
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                        Kapasitet: {summary.capacity}. Påmeldt (bekreftet):{" "}
-                        {summary.totalConfirmed}
-                        {summary.totalWaitlisted > 0
-                            ? `, venteliste: ${summary.totalWaitlisted}`
-                            : ""}
-                        .
-                        {typeof capacityLeft === "number"
-                            ? ` Ledige plasser: ${capacityLeft}.`
-                            : null}
-                    </p>
-                )}
-
-                {/* Påmeldingsskjema */}
+                {/* Skjema først */}
                 {showRsvp && (
-                    <div className="mt-4 border-t border-zinc-200 dark:border-zinc-800 pt-4">
+                    <div className="mt-2">
                         <RSVPForm
                             slug={memorial.slug}
                             onSuccess={() => {
-                                // Ikke re-render hele siden nå – la banneret stå synlig.
-                                // Vi kan evt. refresh’e når brukeren lukker skjemaet.
-                            }}
-                            onCancel={() => {
                                 setShowRsvp(false);
-                                // Valgfritt: når skjemaet lukkes, oppdater tall da:
                                 refresh();
                             }}
+                            onCancel={() => setShowRsvp(false)}
                         />
                     </div>
+                )}
+
+                {/* Tynn divider mellom skjema og info */}
+                <div className="my-4 border-t border-zinc-200 dark:border-zinc-800" />
+
+                {/* Informasjon om minnestund */}
+                <ReceptionBlock reception={memorial.reception} />
+
+                {/* Statuslinje (kapasitet m.m.) */}
+                {summary && (
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        Kapasitet: {summary.capacity}. Påmeldt (bekreftet): {summary.totalConfirmed}
+                        {summary.totalWaitlisted > 0 ? `, venteliste: ${summary.totalWaitlisted}` : ""}.
+                        {typeof capacityLeft === "number" ? ` Ledige plasser: ${capacityLeft}.` : null}
+                    </p>
                 )}
             </section>
         </main>
