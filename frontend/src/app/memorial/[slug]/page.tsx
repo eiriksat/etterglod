@@ -53,11 +53,11 @@ type Memorial = {
 
 type Summary = {
     ok: true;
-    totalConfirmed: number;   // antall personer inkl. +1
-    totalWaitlisted: number;  // antall personer inkl. +1
+    totalConfirmed: number; // antall personer inkl. +1
+    totalWaitlisted: number; // antall personer inkl. +1
     entriesConfirmed: number; // antall rader
     entriesWaitlisted: number;
-    capacity: number;         // kapasitet som backend beregner/rapporterer
+    capacity: number; // kapasitet som backend rapporterer
 };
 
 /* ----------------------------- Hjelpere ----------------------------- */
@@ -71,8 +71,14 @@ function formatDatoKort(iso?: string | null) {
 function formatBisettelseTid(iso: string) {
     const d = new Date(iso);
     const dag = new Intl.DateTimeFormat("nb-NO", { weekday: "long" }).format(d);
-    const dato = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long" }).format(d);
-    const klokkeslett = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit" }).format(d);
+    const dato = new Intl.DateTimeFormat("nb-NO", {
+        day: "numeric",
+        month: "long",
+    }).format(d);
+    const klokkeslett = new Intl.DateTimeFormat("nb-NO", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(d);
     return `${capitalize(dag)} ${dato} kl. ${klokkeslett}`;
 }
 
@@ -113,7 +119,9 @@ export default function MemorialPage() {
 
             const [memRes, sumRes] = await Promise.all([
                 fetch(`${API}/api/memorials/${slug}`, { cache: "no-store" }),
-                fetch(`${API}/api/memorials/${slug}/attendance/summary`, { cache: "no-store" }),
+                fetch(`${API}/api/memorials/${slug}/attendance/summary`, {
+                    cache: "no-store",
+                }),
             ]);
 
             if (!memRes.ok) {
@@ -147,9 +155,11 @@ export default function MemorialPage() {
         return left;
     }, [summary]);
 
-    if (loading) return <main className="p-6 max-w-3xl mx-auto">Laster minneside…</main>;
+    if (loading)
+        return <main className="p-6 max-w-3xl mx-auto">Laster minneside…</main>;
     if (error) return <main className="p-6 max-w-3xl mx-auto">Feil: {error}</main>;
-    if (!memorial) return <main className="p-6 max-w-3xl mx-auto">Ingen data funnet.</main>;
+    if (!memorial)
+        return <main className="p-6 max-w-3xl mx-auto">Ingen data funnet.</main>;
 
     const birth = formatDatoKort(memorial.birthDate);
     const death = formatDatoKort(memorial.deathDate);
@@ -158,8 +168,14 @@ export default function MemorialPage() {
         <main className="p-6 max-w-3xl mx-auto space-y-8">
             <header className="space-y-2">
                 <h1 className="text-3xl font-semibold">{memorial.name}</h1>
-                <p className="text-gray-600">{[birth, death].filter(Boolean).join(" – ")}</p>
-                {memorial.bio && <p className="mt-2 leading-relaxed whitespace-pre-wrap">{memorial.bio}</p>}
+                <p className="text-gray-600">
+                    {[birth, death].filter(Boolean).join(" – ")}
+                </p>
+                {memorial.bio && (
+                    <p className="mt-2 leading-relaxed whitespace-pre-wrap">
+                        {memorial.bio}
+                    </p>
+                )}
             </header>
 
             {/* BISETTELSE */}
@@ -183,12 +199,22 @@ export default function MemorialPage() {
                         )}
                         <div className="flex flex-wrap gap-3">
                             {memorial.ceremony.mapUrl && (
-                                <a className="underline" href={memorial.ceremony.mapUrl} target="_blank" rel="noreferrer">
+                                <a
+                                    className="underline"
+                                    href={memorial.ceremony.mapUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
                                     Åpne kirke i kart
                                 </a>
                             )}
                             {memorial.ceremony.livestream && (
-                                <a className="underline" href={memorial.ceremony.livestream} target="_blank" rel="noreferrer">
+                                <a
+                                    className="underline"
+                                    href={memorial.ceremony.livestream}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
                                     Livestream
                                 </a>
                             )}
@@ -196,7 +222,9 @@ export default function MemorialPage() {
                         {memorial.ceremony.otherInfo && (
                             <div className="pt-2">
                                 <div className="text-gray-600">Annen informasjon:</div>
-                                <p className="whitespace-pre-wrap">{memorial.ceremony.otherInfo}</p>
+                                <p className="whitespace-pre-wrap">
+                                    {memorial.ceremony.otherInfo}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -222,9 +250,15 @@ export default function MemorialPage() {
                 {/* Hvis vi har oppsummering, vis litt status */}
                 {summary && (
                     <p className="text-xs text-gray-600">
-                        Kapasitet: {summary.capacity}. Påmeldt (bekreftet): {summary.totalConfirmed}
-                        {summary.totalWaitlisted > 0 ? `, venteliste: ${summary.totalWaitlisted}` : ""}.
-                        {typeof capacityLeft === "number" ? ` Ledige plasser: ${capacityLeft}.` : null}
+                        Kapasitet: {summary.capacity}. Påmeldt (bekreftet):{" "}
+                        {summary.totalConfirmed}
+                        {summary.totalWaitlisted > 0
+                            ? `, venteliste: ${summary.totalWaitlisted}`
+                            : ""}
+                        .
+                        {typeof capacityLeft === "number"
+                            ? ` Ledige plasser: ${capacityLeft}.`
+                            : null}
                     </p>
                 )}
 
@@ -264,7 +298,10 @@ function ReceptionBlock({ reception }: { reception?: Reception | null }) {
         month: "long",
         year: "numeric",
     }).format(dt);
-    const klokke = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit" }).format(dt);
+    const klokke = new Intl.DateTimeFormat("nb-NO", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(dt);
 
     return (
         <div className="text-sm space-y-1">
@@ -280,11 +317,17 @@ function ReceptionBlock({ reception }: { reception?: Reception | null }) {
                 </div>
             )}
             <div>
-                <span className="text-gray-600">Velkommen:</span> {scopeLabel(reception.welcomeScope)}{" "}
+                <span className="text-gray-600">Velkommen:</span>{" "}
+                {scopeLabel(reception.welcomeScope)}{" "}
                 <span className="text-gray-500">(Begrenset antall plasser)</span>
             </div>
             {reception.mapUrl && (
-                <a className="underline" href={reception.mapUrl} target="_blank" rel="noreferrer">
+                <a
+                    className="underline"
+                    href={reception.mapUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                >
                     Åpne minnestund i kart
                 </a>
             )}
@@ -340,7 +383,7 @@ function RSVPForm({
             try {
                 data = await res.json();
             } catch {
-                /* ignorér tom respons */
+                /* tom respons ignoreres */
             }
 
             if (!res.ok) {
@@ -348,9 +391,12 @@ function RSVPForm({
                 return;
             }
 
-            const text = data?.waitlisted
-                ? "Arrangementet er fulltegnet, men interessen din er registrert. Du får beskjed hvis det blir ledig kapasitet."
-                : "Takk! Påmeldingen er registrert.";
+            // Bruk melding fra backend hvis den finnes
+            const text =
+                (typeof data?.message === "string" && data.message) ||
+                (data?.waitlisted
+                    ? "Arrangementet er fulltegnet, men interessen din er registrert. Du får beskjed hvis det blir ledig kapasitet."
+                    : "Takk! Påmeldingen er registrert.");
 
             setOkMsg(text);
 
@@ -360,7 +406,6 @@ function RSVPForm({
             setPlusOne(false);
             setAllergyNotes("");
 
-            // La brukeren se suksess i skjemaet, men kall onSuccess for å oppdatere tall
             onSuccess?.();
         } catch (e: any) {
             setErrMsg(String(e?.message ?? e));
