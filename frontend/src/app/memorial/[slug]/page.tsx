@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 /** Stabil API-base: aldri undefined, aldri relativ */
@@ -400,6 +400,7 @@ function RSVPForm({
     const [loading, setLoading] = useState(false);
     const [errMsg, setErrMsg] = useState<string | null>(null);
     const [okMsg, setOkMsg] = useState<string | null>(null);
+    const formRef = useRef<HTMLDivElement | null>(null);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -439,6 +440,9 @@ function RSVPForm({
                     : "Takk! Påmeldingen er registrert.");
 
             setOkMsg(text);
+            // Sørg for at brukeren blir værende ved skjemaet (unngå “hopp til toppen”).
+            // Scroller rolig tilbake til skjemaet etter at meldingen er satt.
+            formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
             // Nullstill skjema
             setName("");
@@ -454,9 +458,11 @@ function RSVPForm({
     }
 
     return (
-        <div className="space-y-3">
+        <div ref={formRef} className="space-y-3">
             {okMsg && (
-                <div className="rounded border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/30 px-3 py-2 text-sm">
+                <div className="rounded border px-3 py-2 text-sm
+                            border-green-300 bg-green-50 text-green-800
+                            dark:border-green-600 dark:bg-green-900/40 dark:text-green-100">
                     {okMsg}
                 </div>
             )}
