@@ -169,12 +169,17 @@ export default function MemorialPage() {
             <header className="space-y-4">
                 {/* Bilde (vises kun hvis backend har imageUrl) */}
                 {memorial.imageUrl && (
-                    <img
-                        src={memorial.imageUrl}
-                        alt={`Portrett av ${memorial.name}`}
-                        className="w-full max-h-[420px] object-cover rounded-lg shadow"
-                        loading="eager"
-                    />
+                    <>
+                        <img
+                            src={memorial.imageUrl}
+                            alt={`Portrett av ${memorial.name}`}
+                            className="w-full max-h-[420px] object-cover rounded-lg shadow"
+                            loading="eager"
+                        />
+                        <div className="text-xs text-white select-text">
+                            img: {memorial.imageUrl}
+                        </div>
+                    </>
                 )}
 
                 <div className="space-y-2">
