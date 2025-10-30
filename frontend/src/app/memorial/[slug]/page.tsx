@@ -314,7 +314,7 @@ export default function MemorialPage() {
                         <RSVPForm
                             slug={memorial.slug}
                             onSuccess={() => {
-                                setShowRsvp(false);
+                                // Ikke lukk skjemaet – behold det åpent slik at grønn banner vises.
                                 refresh();
                             }}
                             onCancel={() => setShowRsvp(false)}
@@ -495,8 +495,9 @@ function RSVPForm({
 
                 <div className="flex gap-2">
                     <button
+                        type="submit"
                         disabled={loading}
-                        className="px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50 hover:opacity-90 dark:bg-white dark:text-black"
+                        className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
                     >
                         {loading ? "Sender…" : "Send påmelding"}
                     </button>
