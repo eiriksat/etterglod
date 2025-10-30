@@ -314,10 +314,14 @@ export default function MemorialPage() {
                         <RSVPForm
                             slug={memorial.slug}
                             onSuccess={() => {
-                                // Ikke lukk skjemaet – behold det åpent slik at grønn banner vises.
+                                // Ikke re-render hele siden nå – la banneret stå synlig.
+                                // Vi kan evt. refresh’e når brukeren lukker skjemaet.
+                            }}
+                            onCancel={() => {
+                                setShowRsvp(false);
+                                // Valgfritt: når skjemaet lukkes, oppdater tall da:
                                 refresh();
                             }}
-                            onCancel={() => setShowRsvp(false)}
                         />
                     </div>
                 )}
@@ -442,14 +446,14 @@ function RSVPForm({
             setOkMsg(text);
             // Sørg for at brukeren blir værende ved skjemaet (unngå “hopp til toppen”).
             // Scroller rolig tilbake til skjemaet etter at meldingen er satt.
-            formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            //formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
             // Nullstill skjema
             setName("");
             setEmail("");
             setAllergyNotes("");
 
-            onSuccess?.();
+            //onSuccess?.();
         } catch (e: any) {
             setErrMsg(String(e?.message ?? e));
         } finally {
