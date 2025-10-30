@@ -414,6 +414,7 @@ function RSVPForm({
                 body: JSON.stringify({
                     name,
                     email,
+                    plusOne: false,
                     allergies: allergyNotes || undefined,
                 }),
             });
