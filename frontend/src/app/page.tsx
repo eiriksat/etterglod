@@ -1,117 +1,108 @@
-"use client";
+import Link from "next/link";
+import Image from "next/image";
 
-import { useState, useEffect } from "react";
+export const metadata = {
+    title: "Etterglød – en verdig digital minneside",
+    description:
+        "Etterglød er en enkel og verdig løsning for å dele praktisk informasjon om bisettelse og minnestund, og for påmelding til minnestunden.",
+};
 
 export default function HomePage() {
-    const api = process.env.NEXT_PUBLIC_API_URL!;
-    const [health, setHealth] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetch(`${api}/api/health`)
-            .then((r) => r.json())
-            .then(setHealth)
-            .finally(() => setLoading(false));
-    }, [api]);
-
     return (
-        <main className="p-6 max-w-xl mx-auto space-y-6">
-            <h1 className="text-2xl font-semibold">Etterglød</h1>
+        <main className="min-h-[100svh] bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+            {/* Hero */}
+            <section className="relative isolate">
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-50 to-transparent dark:from-zinc-900/40"
+                />
+                <div className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
+                    <div className="grid items-center gap-10 md:grid-cols-2">
+                        <div className="space-y-4">
+                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                Etterglød – en verdig digital minneside
+                            </h1>
+                            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-[17px]">
+                                Etterglød er en enkel og verdig løsning for å dele praktisk
+                                informasjon i forbindelse med bisettelse og minnestund.
+                                Familie og venner kan finne tid, sted og annen informasjon — og
+                                melde seg på minnestunden direkte.
+                            </p>
+                            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-[17px]">
+                                Hver avdød får sin egen, korte nettadresse som kan brukes i
+                                dødsannonser, minneord og meldinger. Siden kan inneholde
+                                portrettbilde, en kort tekst, detaljer om seremonien og
+                                påmelding til minnestunden.
+                            </p>
 
-            <section className="rounded border p-4">
-                <h2 className="font-medium mb-2">API-status</h2>
-                <pre className="text-sm bg-gray-50 p-3 rounded">
-          {loading ? "Laster…" : JSON.stringify(health, null, 2)}
-        </pre>
+                            <div className="pt-2">
+                                <Link
+                                    href="/memorial/ingvild-saether-1968-2025"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-white shadow hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+                                >
+                                    Se et eksempel
+                                    <span aria-hidden>→</span>
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Hero-bilde (stearinlys) */}
+                        <figure className="order-first md:order-last">
+                            <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm">
+                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/10 pointer-events-none" />
+                                {/* Bytt ut src når bildet ligger klart i /public/hero/candle.jpg */}
+                                <Image
+                                    src="/hero/candle.jpg"
+                                    alt="Et tent stearinlys"
+                                    width={1200}
+                                    height={800}
+                                    className="h-auto w-full object-cover"
+                                    priority
+                                />
+                            </div>
+                            <figcaption className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                                Et rolig øyeblikk — symbol på etterglød og minne.
+                            </figcaption>
+                        </figure>
+                    </div>
+                </div>
             </section>
 
-            <ContactForm api={api} />
+            {/* Hvordan fungerer det */}
+            <section className="mx-auto max-w-5xl px-6 pb-20">
+                <div className="rounded-2xl border border-zinc-200 bg-white/60 p-6 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <h2 className="text-lg font-medium">Hvordan fungerer det?</h2>
+                    <div className="mt-4 grid gap-6 sm:grid-cols-3">
+                        <div>
+                            <div className="text-2xl" aria-hidden>1.</div>
+                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
+                                Opprett en minneside for avdøde — med navn, årstall og et kort
+                                minneord.
+                            </p>
+                        </div>
+                        <div>
+                            <div className="text-2xl" aria-hidden>2.</div>
+                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
+                                Del den korte nettadressen i dødsannonsen og meldinger.
+                            </p>
+                        </div>
+                        <div>
+                            <div className="text-2xl" aria-hidden>3.</div>
+                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
+                                De nærmeste finner tid og sted — og kan melde seg på minnestunden.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <footer className="mt-10 border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                    <p>© {new Date().getFullYear()} Etterglød. Laget med omtanke.</p>
+                    <p className="mt-1">
+                        Kontakt: <a className="underline" href="mailto:eirik.saether@akuna.no">Eirik Sæther</a>
+                    </p>
+                </footer>
+            </section>
         </main>
-    );
-}
-
-function ContactForm({ api }: { api: string }) {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [message, setMessage] = useState("");
-    const [result, setResult] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-
-    async function onSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setResult(null);
-
-        try {
-            const res = await fetch(`${api}/api/contact`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, message }),
-            });
-
-            const data = await res.json();
-
-            // 📋 Sjekk om API svarte med feil
-            if (!res.ok) {
-                setResult({ ok: false, data });
-                return;
-            }
-
-            // ✅ Vellykket innsending
-            setResult({ ok: true, data });
-            setName("");
-            setEmail("");
-            setMessage("");
-        } catch (err: any) {
-            // ⚠️ Nettverksfeil, uventede feil etc.
-            setResult({ ok: false, data: { error: String(err) } });
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    return (
-        <section className="rounded border p-4">
-            <h2 className="font-medium mb-2">Kontakt</h2>
-            <form onSubmit={onSubmit} className="space-y-3">
-                <div>
-                    <label className="block text-sm">Navn</label>
-                    <input
-                        className="w-full border rounded px-3 py-2"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm">E-post</label>
-                    <input
-                        className="w-full border rounded px-3 py-2"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm">Melding</label>
-                    <textarea
-                        className="w-full border rounded px-3 py-2 min-h-[100px]"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                    />
-                </div>
-                <button
-                    disabled={loading}
-                    className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
-                >
-                    {loading ? "Sender…" : "Send"}
-                </button>
-            </form>
-
-            {result && (
-                <pre className="text-sm bg-gray-50 p-3 rounded mt-3">
-          {JSON.stringify(result, null, 2)}
-        </pre>
-            )}
-        </section>
     );
 }
