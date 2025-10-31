@@ -1,107 +1,203 @@
-import Link from "next/link";
-import Image from "next/image";
+"use client";
 
-export const metadata = {
-    title: "Etterglød – en verdig digital minneside",
-    description:
-        "Etterglød er en enkel og verdig løsning for å dele praktisk informasjon om bisettelse og minnestund, og for påmelding til minnestunden.",
+import { useEffect, useMemo, useState } from "react";
+
+/** Stabil API-base: aldri undefined, aldri relativ */
+const API = (() => {
+    const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+    if (typeof window === "undefined") {
+        return process.env.NODE_ENV === "development"
+            ? "http://localhost:4000"
+            : env.startsWith("http") ? env : "https://api.etterglod.no";
+    }
+    return env.startsWith("http") ? env : "https://api.etterglod.no";
+})();
+
+/* ----------------------------- Typer ----------------------------- */
+
+type Ceremony = {
+    dateTime: string;
+    venue: string;
+    address?: string | null;
+    mapUrl?: string | null;
 };
 
+type MemorialListItem = {
+    id: number;
+    slug: string;
+    name: string;
+    birthDate?: string | null;
+    deathDate?: string | null;
+    imageUrl?: string | null;
+    createdAt: string;
+    ceremony?: Pick<Ceremony, "dateTime" | "venue" | "address"> | null;
+};
+
+/* ----------------------------- Hjelpere ----------------------------- */
+
+function withinNextDays(iso?: string | null, days = 10) {
+    if (!iso) return false;
+    const now = new Date();
+    const end = new Date();
+    end.setDate(end.getDate() + days);
+    const d = new Date(iso);
+    return d >= now && d <= end;
+}
+
+function formatDatoKort(iso?: string | null) {
+    if (!iso) return "";
+    return new Intl.DateTimeFormat("nb-NO").format(new Date(iso));
+}
+
+function formatSeremoniKort(iso?: string | null) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dato = new Intl.DateTimeFormat("nb-NO", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+    }).format(d);
+    const klokke = new Intl.DateTimeFormat("nb-NO", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(d);
+    // Kapitaliser første bokstav i ukedagen
+    return `${dato.charAt(0).toUpperCase()}${dato.slice(1)} kl. ${klokke}`;
+}
+
+/* ----------------------------- Side ----------------------------- */
+
 export default function HomePage() {
+    const [memorials, setMemorials] = useState<MemorialListItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                setLoading(true);
+                setErr(null);
+                // Henter inntil 200, filterer på klient (enkel og trygg for nå)
+                const res = await fetch(`${API}/api/memorials?take=200`, { cache: "no-store" });
+                if (!res.ok) throw new Error(`Kunne ikke hente liste (${res.status})`);
+                const json = await res.json();
+                const items: MemorialListItem[] = json?.items ?? [];
+                setMemorials(items);
+            } catch (e: any) {
+                setErr(String(e?.message ?? e));
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, []);
+
+    const upcoming = useMemo(() => {
+        return memorials
+            .filter(m => withinNextDays(m.ceremony?.dateTime, 10))
+            .sort((a, b) => {
+                const ad = new Date(a.ceremony?.dateTime ?? 0).getTime();
+                const bd = new Date(b.ceremony?.dateTime ?? 0).getTime();
+                return ad - bd;
+            });
+    }, [memorials]);
+
     return (
-        <main className="min-h-[100svh] bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-            {/* Hero */}
-            <section className="relative isolate">
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-50 to-transparent dark:from-zinc-900/40"
+        <main className="max-w-3xl mx-auto px-6 py-8 space-y-10">
+            {/* HERO – kun bilde, 20% mindre enn før */}
+            <section className="flex justify-center">
+                <img
+                    src="/hero/candle.jpg"
+                    alt="Brennende kubbelys"
+                    className="rounded-2xl shadow sm:w-[80%] w-full"
+                    loading="eager"
+                    decoding="async"
                 />
-                <div className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
-                    <div className="grid items-center gap-10 md:grid-cols-2">
-                        <div className="space-y-4">
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                Etterglød – en verdig digital minneside
-                            </h1>
-                            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-[17px]">
-                                Etterglød er en enkel og verdig løsning for å dele praktisk
-                                informasjon i forbindelse med bisettelse og minnestund.
-                                Familie og venner kan finne tid, sted og annen informasjon — og
-                                melde seg på minnestunden direkte.
-                            </p>
-                            <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-[17px]">
-                                Hver avdød får sin egen, korte nettadresse som kan brukes i
-                                dødsannonser, minneord og meldinger. Siden kan inneholde
-                                portrettbilde, en kort tekst, detaljer om seremonien og
-                                påmelding til minnestunden.
-                            </p>
+            </section>
 
-                            <div className="pt-2">
-                                <Link
-                                    href="/memorial/ingvild-saether-1968-2025"
-                                    className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-white shadow hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
-                                >
-                                    Se et eksempel
-                                    <span aria-hidden>→</span>
-                                </Link>
-                            </div>
-                        </div>
+            {/* KOMMENDE SEREMONIER (neste 10 dager) */}
+            <section className="space-y-4">
+                <h2 className="text-xl font-medium tracking-tight">Kommende seremonier (neste 10 dager)</h2>
 
-                        {/* Hero-bilde (stearinlys) */}
-                        <figure className="order-first md:order-last">
-                            <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm">
-                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/10 pointer-events-none" />
-                                {/* Bytt ut src når bildet ligger klart i /public/hero/candle.jpg */}
-                                <Image
-                                    src="/hero/candle.jpg"
-                                    alt="Et tent stearinlys"
-                                    width={1200}
-                                    height={800}
-                                    className="h-auto w-full object-cover"
-                                    priority
-                                />
-                            </div>
-                            <figcaption className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                                Et rolig øyeblikk — symbol på etterglød og minne.
-                            </figcaption>
-                        </figure>
+                {loading && <div className="text-zinc-600 dark:text-zinc-400 text-sm">Laster…</div>}
+                {err && <div className="text-red-600 dark:text-red-400 text-sm">Feil: {err}</div>}
+
+                {!loading && !err && upcoming.length === 0 && (
+                    <div className="text-zinc-600 dark:text-zinc-400 text-sm">
+                        Ingen seremonier registrert de neste dagene.
                     </div>
+                )}
+
+                <div className="space-y-3">
+                    {upcoming.map((m) => {
+                        const birth = formatDatoKort(m.birthDate);
+                        const death = formatDatoKort(m.deathDate);
+                        const tidspunkt = formatSeremoniKort(m.ceremony?.dateTime);
+                        const venue = m.ceremony?.venue ?? "";
+
+                        return (
+                            <a
+                                key={m.id}
+                                href={`/memorial/${m.slug}`}
+                                className={[
+                                    "group block w-full rounded-xl border",
+                                    "border-zinc-200 bg-white hover:bg-zinc-50",
+                                    "dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900",
+                                    "p-4 transition-colors"
+                                ].join(" ")}
+                            >
+                                <div className="flex items-center gap-4">
+                                    {/* Tekst */}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="font-medium truncate">
+                                            {m.name}
+                                        </div>
+                                        <div className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                                            {[birth, death].filter(Boolean).join(" – ")}
+                                        </div>
+                                        {tidspunkt && (
+                                            <div className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                                                {tidspunkt}{venue ? ` · ${venue}` : ""}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Thumbnail */}
+                                    <div className="shrink-0">
+                                        <div className="relative h-14 w-20 overflow-hidden rounded-lg ring-1 ring-black/5 dark:ring-white/10 bg-zinc-100 dark:bg-zinc-800">
+                                            <img
+                                                src={m.imageUrl || "/hero/candle.jpg"}
+                                                alt=""
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        );
+                    })}
                 </div>
             </section>
 
-            {/* Hvordan fungerer det */}
-            <section className="mx-auto max-w-5xl px-6 pb-20">
-                <div className="rounded-2xl border border-zinc-200 bg-white/60 p-6 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/40">
-                    <h2 className="text-lg font-medium">Hvordan fungerer det?</h2>
-                    <div className="mt-4 grid gap-6 sm:grid-cols-3">
-                        <div>
-                            <div className="text-2xl" aria-hidden>1.</div>
-                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
-                                Opprett en minneside for avdøde — med navn, årstall og et kort
-                                minneord.
-                            </p>
-                        </div>
-                        <div>
-                            <div className="text-2xl" aria-hidden>2.</div>
-                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
-                                Del den korte nettadressen i dødsannonsen og meldinger.
-                            </p>
-                        </div>
-                        <div>
-                            <div className="text-2xl" aria-hidden>3.</div>
-                            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
-                                De nærmeste finner tid og sted — og kan melde seg på minnestunden.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            {/* Luft/whitespace før informasjonsblokken */}
+            <div className="h-6" />
 
-                {/* Footer */}
-                <footer className="mt-10 border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                    <p>© {new Date().getFullYear()} Etterglød. Laget med omtanke.</p>
-                    <p className="mt-1">
-                        Kontakt: <a className="underline" href="mailto:eirik.saether@akuna.no">Eirik Sæther</a>
-                    </p>
-                </footer>
+            {/* Informasjon om Etterglød */}
+            <section className="space-y-3">
+                <h2 className="text-xl font-medium tracking-tight">Om Etterglød</h2>
+                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                    Etterglød gir en verdig og enkel måte å dele praktisk informasjon om bisettelse og
+                    minnestund. Hver minneside får en kort adresse (for eksempel <code>/ingvild68</code>)
+                    som kan brukes i dødsannonser og invitasjoner. Siden samler tid, sted og eventuelt
+                    påmelding, slik at familie og venner lett finner frem.
+                </p>
+                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                    Tjenesten er laget med fokus på ro, oversikt og verdighet – og med minst mulig friksjon
+                    for de som skal formidle informasjon i en sårbar tid.
+                </p>
+                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                    Spørsmål? Ta kontakt på <a className="underline" href="mailto:eiriksat@gmail.com">eiriksat@gmail.com</a>.
+                </p>
             </section>
         </main>
     );
