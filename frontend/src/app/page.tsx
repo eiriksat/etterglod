@@ -28,16 +28,25 @@ function formatDate(iso?: string | null) {
 function formatDateTime(iso?: string | null) {
     if (!iso) return "";
     const d = new Date(iso);
-    const date = new Intl.DateTimeFormat("nb-NO", {
+
+    // Bruk norsk tidssone eksplisitt
+    const optsDate: Intl.DateTimeFormatOptions = {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-    }).format(d);
-    const time = new Intl.DateTimeFormat("nb-NO", {
+        timeZone: "Europe/Oslo",
+    };
+    const optsTime: Intl.DateTimeFormatOptions = {
         hour: "2-digit",
         minute: "2-digit",
-    }).format(d);
+        timeZone: "Europe/Oslo",
+    };
+
+    const date = new Intl.DateTimeFormat("nb-NO", optsDate).format(d);
+    const time = new Intl.DateTimeFormat("nb-NO", optsTime).format(d);
+
     return `${date} kl. ${time}`;
+}
 }
 function withinNextDays(iso?: string | null, days = 10) {
     if (!iso) return false;
