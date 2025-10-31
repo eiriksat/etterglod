@@ -192,6 +192,60 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
         return res.status(500).json({ ok: false, error: "Serverfeil" });
     }
 });
+// Admin: Reconcile/promote waitlisted entries up to capacity
+attendance.post("/memorials/:slug/attendance/reconcile", requireAdmin, async (req, res) => {
+    try {
+        const slug = String(req.params.slug);
+
+        const mem = await prisma.memorial.findUnique({
+            where: { slug },
+            select: { id: true },
+        });
+        if (!mem) return res.status(404).json({ ok: false, error: "Memorial not found" });
+
+        // 1) Finn confirmed totalt (antall personer inkl. +1)
+        const confirmedRows = await prisma.attendance.findMany({
+            where: { memorialId: mem.id, waitlisted: false },
+            select: { plusOne: true },
+        });
+        const totalConfirmed = confirmedRows.reduce((sum, r) => sum + (r.plusOne ? 2 : 1), 0);
+
+        // 2) Beregn ledige plasser
+        let remaining = Math.max(0, Number(process.env.CAPACITY ?? 60) - totalConfirmed);
+        if (remaining === 0) {
+            return res.json({ ok: true, promoted: 0, remaining });
+        }
+
+        // 3) Hent venteliste i kronologisk rekkefølge
+        const waitlisted = await prisma.attendance.findMany({
+            where: { memorialId: mem.id, waitlisted: true },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, plusOne: true },
+        });
+
+        // 4) Promoter så langt vi har kapasitet
+        let promoted = 0;
+        for (const row of waitlisted) {
+            const needed = row.plusOne ? 2 : 1;
+            if (needed <= remaining) {
+                await prisma.attendance.update({
+                    where: { id: row.id },
+                    data: { waitlisted: false },
+                });
+                remaining -= needed;
+                promoted++;
+                if (remaining === 0) break;
+            } else {
+                break;
+            }
+        }
+
+        return res.json({ ok: true, promoted, remaining });
+    } catch (e: any) {
+        console.error("POST /memorials/:slug/attendance/reconcile", e);
+        return res.status(500).json({ ok: false, error: "Server error" });
+    }
+});
 
 /**
  * Offentlig oppsummering
