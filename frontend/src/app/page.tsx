@@ -47,7 +47,7 @@ function formatDateTime(iso?: string | null) {
 
     return `${date} kl. ${time}`;
 }
-}
+
 function withinNextDays(iso?: string | null, days = 10) {
     if (!iso) return false;
     const d = new Date(iso).getTime();
