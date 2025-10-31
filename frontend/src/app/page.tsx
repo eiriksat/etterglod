@@ -61,7 +61,6 @@ function formatSeremoniKort(iso?: string | null) {
         hour: "2-digit",
         minute: "2-digit",
     }).format(d);
-    // Kapitaliser første bokstav i ukedagen
     return `${dato.charAt(0).toUpperCase()}${dato.slice(1)} kl. ${klokke}`;
 }
 
@@ -77,7 +76,6 @@ export default function HomePage() {
             try {
                 setLoading(true);
                 setErr(null);
-                // Henter inntil 200, filterer på klient (enkel og trygg for nå)
                 const res = await fetch(`${API}/api/memorials?take=200`, { cache: "no-store" });
                 if (!res.ok) throw new Error(`Kunne ikke hente liste (${res.status})`);
                 const json = await res.json();
@@ -102,16 +100,39 @@ export default function HomePage() {
     }, [memorials]);
 
     return (
-        <main className="max-w-3xl mx-auto px-6 py-8 space-y-10">
-            {/* HERO – kun bilde, 20% mindre enn før */}
-            <section className="flex justify-center">
-                <img
-                    src="/hero/candle.jpg"
-                    alt="Brennende kubbelys"
-                    className="rounded-2xl shadow sm:w-[80%] w-full"
-                    loading="eager"
-                    decoding="async"
-                />
+        <main className="max-w-3xl mx-auto px-6 py-10 space-y-10">
+            {/* Tittel */}
+            <header className="text-center">
+                <h1 className="text-3xl font-semibold tracking-tight">Etterglød</h1>
+            </header>
+
+            {/* Intro: Om + lite lys til høyre */}
+            <section className="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
+                {/* Venstre: tekst (3/5) */}
+                <div className="md:col-span-3 space-y-3">
+                    <h2 className="text-xl font-medium tracking-tight">Om Etterglød</h2>
+                    <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                        Etterglød gir en verdig og enkel måte å dele praktisk informasjon om bisettelse og
+                        minnestund. Hver minneside får en kort adresse (for eksempel <code>/ingvild68</code>)
+                        som kan brukes i dødsannonser og invitasjoner. Siden samler tid, sted og eventuelt
+                        påmelding, slik at familie og venner lett finner frem.
+                    </p>
+                    <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                        Tjenesten er laget med fokus på ro, oversikt og verdighet – og med minst mulig friksjon
+                        for de som skal formidle informasjon i en sårbar tid.
+                    </p>
+                </div>
+
+                {/* Høyre: lite bilde (2/5) */}
+                <div className="md:col-span-2 flex md:justify-end">
+                    <img
+                        src="/hero/candle.jpg"
+                        alt="Brennende kubbelys"
+                        className="rounded-xl shadow w-40 sm:w-48 md:w-56"
+                        loading="eager"
+                        decoding="async"
+                    />
+                </div>
             </section>
 
             {/* KOMMENDE SEREMONIER (neste 10 dager) */}
@@ -179,26 +200,54 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {/* Luft/whitespace før informasjonsblokken */}
-            <div className="h-6" />
+            {/* Luft */}
+            <div className="h-8" />
 
-            {/* Informasjon om Etterglød */}
-            <section className="space-y-3">
-                <h2 className="text-xl font-medium tracking-tight">Om Etterglød</h2>
-                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
-                    Etterglød gir en verdig og enkel måte å dele praktisk informasjon om bisettelse og
-                    minnestund. Hver minneside får en kort adresse (for eksempel <code>/ingvild68</code>)
-                    som kan brukes i dødsannonser og invitasjoner. Siden samler tid, sted og eventuelt
-                    påmelding, slik at familie og venner lett finner frem.
-                </p>
-                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
-                    Tjenesten er laget med fokus på ro, oversikt og verdighet – og med minst mulig friksjon
-                    for de som skal formidle informasjon i en sårbar tid.
-                </p>
-                <p className="text-[17px] leading-relaxed text-zinc-800 dark:text-zinc-200">
-                    Spørsmål? Ta kontakt på <a className="underline" href="mailto:eiriksat@gmail.com">eiriksat@gmail.com</a>.
-                </p>
+            {/* Slik virker det (3 steg i ramme) */}
+            <section>
+                <h2 className="text-xl font-medium tracking-tight mb-3">Slik virker det</h2>
+                <div className={[
+                    "rounded-2xl border p-4 md:p-6",
+                    "border-zinc-200 bg-white",
+                    "dark:border-zinc-800 dark:bg-zinc-950"
+                ].join(" ")}>
+                    <ol className="space-y-4">
+                        <li className="flex gap-3">
+                            <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 flex items-center justify-center text-sm">1</div>
+                            <div>
+                                <div className="font-medium">Lag en minneside (kortadresse)</div>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                    Hver minneside får en enkel, kort adresse (f.eks. <code>/ingvild68</code>) som kan brukes i dødsannonser og invitasjoner.
+                                </p>
+                            </div>
+                        </li>
+                        <li className="flex gap-3">
+                            <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 flex items-center justify-center text-sm">2</div>
+                            <div>
+                                <div className="font-medium">Del praktisk informasjon</div>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                    Tid og sted for bisettelse og minnestund samles på ett sted. Eventuell påmelding kan aktiveres ved behov.
+                                </p>
+                            </div>
+                        </li>
+                        <li className="flex gap-3">
+                            <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 flex items-center justify-center text-sm">3</div>
+                            <div>
+                                <div className="font-medium">Del lenken – resten går av seg selv</div>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                    Familie og venner finner siden enkelt og holdes oppdatert uten ekstra koordinering.
+                                </p>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
             </section>
+
+            {/* Separator + footer */}
+            <hr className="border-zinc-200 dark:border-zinc-800" />
+            <footer className="py-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                © {new Date().getFullYear()} Etterglød · Kontakt: <a className="underline" href="mailto:eiriksat@gmail.com">eiriksat@gmail.com</a>
+            </footer>
         </main>
     );
 }
