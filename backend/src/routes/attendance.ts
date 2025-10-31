@@ -6,7 +6,7 @@ import { requireAdmin } from "../middleware/admin.js";
 export const attendance = Router();
 
 // Myk kapasitet (kan flyttes til DB senere)
-const CAPACITY = 118;
+const CAPACITY = Number(process.env.CAPACITY ?? 118);
 
 /** Hjelpere */
 function toBoolean(v: unknown): boolean {
