@@ -24,7 +24,21 @@ function formatDate(iso?: string | null) {
     const d = new Date(iso);
     return new Intl.DateTimeFormat("nb-NO", { day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
 }
-
+// Ny hjelpefunksjon – legg den rett her:
+function formatDateTime(iso?: string | null) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const date = new Intl.DateTimeFormat("nb-NO", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(d);
+    const time = new Intl.DateTimeFormat("nb-NO", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(d);
+    return `${date} kl. ${time}`;
+}
 function withinNextDays(iso?: string | null, days = 10) {
     if (!iso) return false;
     const d = new Date(iso).getTime();
@@ -93,7 +107,7 @@ export default async function HomePage() {
 
             {/* De neste 10 dagene */}
             <section className="space-y-4">
-                <h2 className="text-lg font-medium">De neste 10 dagene</h2>
+                <h2 className="text-lg font-medium">Seremonier de neste 10 dagene</h2>
 
                 {upcoming.length === 0 ? (
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -104,7 +118,6 @@ export default async function HomePage() {
                         {upcoming.map((m) => {
                             const birth = formatDate(m.birthDate);
                             const death = formatDate(m.deathDate);
-                            const dt = formatDate(m.ceremony?.dateTime ?? null);
 
                             return (
                                 <li key={m.id}>
@@ -113,36 +126,52 @@ export default async function HomePage() {
                                         className="group block"
                                         prefetch={false}
                                     >
-                                        <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 sm:p-4 shadow-sm hover:shadow transition flex items-center gap-3">
-                                            {/* Thumb */}
-                                            <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg ring-1 ring-black/5 bg-zinc-100 dark:bg-zinc-900">
-                                                {m.imageUrl ? (
-                                                    <img
-                                                        src={m.imageUrl}
-                                                        alt={m.name}
-                                                        className="h-full w-full object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                ) : (
-                                                    <div className="h-full w-full flex items-center justify-center text-xs text-zinc-500">
-                                                        —
-                                                    </div>
+                                        {/* Hele kortet */}
+                                        <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm hover:shadow transition">
+
+                                            {/* Banner med dato + sted */}
+                                            <div className="w-full rounded-t-xl bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+                                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                        {formatDateTime(m.ceremony?.dateTime ?? null)}
+                                    </span>
+                                                {m.ceremony?.venue && (
+                                                    <span className="text-sm text-zinc-600 dark:text-zinc-300 truncate">
+                                            {m.ceremony.venue}
+                                        </span>
                                                 )}
                                             </div>
 
-                                            {/* Tekst */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium truncate">
-                                                    {m.name}
+                                            {/* Innholdsraden */}
+                                            <div className="p-3 sm:p-4 flex items-center gap-3">
+                                                {/* Thumb */}
+                                                <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg ring-1 ring-black/5 bg-zinc-100 dark:bg-zinc-900">
+                                                    {m.imageUrl ? (
+                                                        <img
+                                                            src={m.imageUrl}
+                                                            alt={m.name}
+                                                            className="h-full w-full object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center text-xs text-zinc-500">
+                                                            —
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
-                                                    {birth && death ? `${birth} – ${death}` : (birth || death || "")}
-                                                </div>
-                                            </div>
 
-                                            {/* Dato høyre */}
-                                            <div className="text-sm text-zinc-700 dark:text-zinc-300 tabular-nums">
-                                                {dt}
+                                                {/* Tekst */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium truncate">
+                                                        {m.name}
+                                                    </div>
+                                                    <div className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                                                        {birth && death
+                                                            ? `${birth} – ${death}`
+                                                            : birth || death || ""}
+                                                    </div>
+                                                </div>
+
+                                                {/* Høyre kolonne – droppet dato (banner viser det) */}
                                             </div>
                                         </div>
                                     </Link>
