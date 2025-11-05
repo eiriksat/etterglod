@@ -19,7 +19,7 @@ export default function MinnetalePage() {
                 </p>
             </section>
 
-            <article className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed">
+            <article className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed"><article className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed space-y-6 sm:space-y-7 [&>p]:leading-8">
                 <h1 className="text-center">Speech for Ingvild</h1>
 
                 {/* INTRO */}
