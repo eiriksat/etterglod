@@ -1,79 +1,97 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
-// Stabil API-base: aldri undefined, aldri relativ
 const API = (() => {
     const env = (process.env.NEXT_PUBLIC_API_URL || "").trim();
-    // Lokalt (node på server under dev) -> localhost
     if (typeof window === "undefined") {
         return process.env.NODE_ENV === "development"
             ? "http://localhost:4000"
-            : (env.startsWith("http") ? env : "https://api.etterglod.no");
+            : env.startsWith("http") ? env : "https://api.etterglod.no";
     }
-    // I browseren -> bruk env hvis gyldig, ellers prod fallback
     return env.startsWith("http") ? env : "https://api.etterglod.no";
 })();
 
-type MemorialListItem = {
-    slug: string;
-    name: string;
-    birthDate?: string | null;
-    deathDate?: string | null;
-    imageUrl?: string | null;
-    ceremony?: { dateTime?: string | null; venue?: string | null; address?: string | null } | null;
-};
-
-export default function AdminDashboardPage() {
-    const [items, setItems] = useState<MemorialListItem[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function AdminPage() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [token, setToken] = useState<string | null>(null);
     const [err, setErr] = useState<string | null>(null);
 
     useEffect(() => {
-        (async () => {
-            setLoading(true);
-            setErr(null);
-            try {
-                const res = await fetch(`${API}/api/memorials?take=100`);
-                const json = await res.json();
-                if (!res.ok) throw new Error(json?.error || `Feil (${res.status})`);
-                setItems(json.items ?? []);
-            } catch (e: any) {
-                setErr(String(e.message || e));
-            } finally {
-                setLoading(false);
-            }
-        })();
+        setToken(localStorage.getItem("eg_admin_jwt"));
     }, []);
 
-    if (loading) return <p className="p-6">Laster…</p>;
-    if (err) return <p className="p-6 text-red-600">{err}</p>;
+    async function login(e: React.FormEvent) {
+        e.preventDefault();
+        setErr(null);
+        const res = await fetch(`${API}/api/admin/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.token) {
+            setErr(data?.error || "Login failed");
+            return;
+        }
+        localStorage.setItem("eg_admin_jwt", data.token);
+        setToken(data.token);
+    }
+
+    function logout() {
+        localStorage.removeItem("eg_admin_jwt");
+        setToken(null);
+    }
+
+    if (!token) {
+        return (
+            <main className="max-w-md mx-auto p-6 space-y-4">
+                <h1 className="text-2xl font-semibold">Admin</h1>
+                {err && <div className="text-sm text-red-600">{err}</div>}
+                <form onSubmit={login} className="space-y-3">
+                    <input className="w-full border rounded px-3 py-2"
+                           placeholder="E-post"
+                           type="email" value={email}
+                           onChange={(e) => setEmail(e.target.value)} />
+                    <input className="w-full border rounded px-3 py-2"
+                           placeholder="Passord"
+                           type="password" value={password}
+                           onChange={(e) => setPassword(e.target.value)} />
+                    <button className="px-4 py-2 rounded bg-black text-white">Logg inn</button>
+                </form>
+            </main>
+        );
+    }
 
     return (
-        <div className="max-w-3xl mx-auto p-6 space-y-4">
-            <h1 className="text-xl font-semibold">Administrasjon</h1>
-            {items.length === 0 ? (
-                <p>Ingen minnesider funnet.</p>
-            ) : (
-                <ul className="divide-y">
-                    {items.map((m) => (
-                        <li key={m.slug} className="py-3 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <div className="font-medium truncate">{m.name}</div>
-                                <div className="text-sm text-gray-600 truncate">
-                                    {m.ceremony?.venue ?? "—"}{m.ceremony?.dateTime ? ` · ${new Date(m.ceremony.dateTime).toLocaleString()}` : ""}
-                                </div>
-                            </div>
-                            <div className="shrink-0 flex gap-3">
-                                <Link href={`/memorial/${m.slug}`} className="underline">Vis</Link>
-                                <Link href={`/admin/${m.slug}`} className="underline">Moderér</Link>
-                                <Link href={`/admin/${m.slug}/edit`} className="underline">Rediger</Link>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
+        <main className="max-w-3xl mx-auto p-6 space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-semibold">Admin</h1>
+                <button onClick={logout} className="px-3 py-2 border rounded">Logg ut</button>
+            </div>
+
+            {/* Eksempel: hent protected data */}
+            <AdminDashboard token={token} />
+        </main>
+    );
+}
+
+function AdminDashboard({ token }: { token: string }) {
+    const [ping, setPing] = useState<any>(null);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetch(`${API}/api/admin/ping`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(setPing)
+            .catch((e) => setErr(String(e)));
+    }, [token]);
+
+    return (
+        <div className="rounded border p-4">
+            <div className="font-medium mb-2">Tilgangstest</div>
+            {err && <div className="text-sm text-red-600">Feil: {err}</div>}
+            {ping && <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(ping, null, 2)}</pre>}
         </div>
     );
 }

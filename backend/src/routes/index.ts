@@ -4,6 +4,7 @@ import { contact } from "./contact.js";
 import { memorials } from "./memorials.js";
 import { attendance } from "./attendance.js";
 import { memory } from "./memory.js";
+import { adminAuth } from "./admin-auth.js"; // <— NY
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use(contact);
 router.use(memorials);
 router.use(attendance);
 router.use(memory);
+router.use(adminAuth); // <— NY
 
-export default router; // 👈 eneste export
+export default router;
