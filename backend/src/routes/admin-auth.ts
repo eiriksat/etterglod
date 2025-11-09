@@ -3,21 +3,17 @@ import { signAdminJwt, requireAdminJwt } from "../middleware/jwt.js";
 
 export const adminAuth = Router();
 
-/** POST /api/admin/auth/login { email, password } -> { token } */
-adminAuth.post("/admin/auth/login", async (req, res) => {
-    const { email, password } = req.body ?? {};
-    const okEmail = String(email || "").toLowerCase().trim() === String(process.env.ADMIN_EMAIL || "").toLowerCase().trim();
-    const okPass  = String(password || "") === String(process.env.ADMIN_PASSWORD || "");
+/** Enkel innlogging: sammenligner passord mot ADMIN_PASSWORD secret */
+adminAuth.post("/admin/login", (req, res) => {
+    const { password } = req.body ?? {};
+    const ok = typeof password === "string" && password === process.env.ADMIN_PASSWORD;
+    if (!ok) return res.status(401).json({ ok: false, error: "Invalid credentials" });
 
-    if (!okEmail || !okPass) {
-        return res.status(401).json({ ok: false, error: "Invalid credentials" });
-    }
-
-    const token = signAdminJwt({ email });
+    const token = signAdminJwt("admin");
     return res.json({ ok: true, token });
 });
 
-/** En enkel helsesjekk for beskyttede kall */
-adminAuth.get("/admin/ping", requireAdminJwt, (req, res) => {
-    res.json({ ok: true, admin: (req as any).admin });
+/** Test-route som krever admin-JWT */
+adminAuth.get("/admin/ping", requireAdminJwt, (_req, res) => {
+    res.json({ ok: true, message: "admin ok" });
 });
