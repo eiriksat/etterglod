@@ -1,22 +1,35 @@
 import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 
-export function signAdminJwt(payload: object, expiresIn = "12h") {
-    const secret = process.env.JWT_SECRET!;
-    return jwt.sign(payload, secret, { expiresIn });
+const JWT_SECRET = (process.env.JWT_SECRET || "").trim();
+
+if (!JWT_SECRET) {
+    // Ikke crash ved build, men logg tydelig
+    // (i prod MÅ dette være satt via flyctl secrets)
+    console.warn("[jwt] JWT_SECRET is not set. JWT auth will fail at runtime.");
 }
 
-export function requireAdminJwt(req: Request, res: Response, next: NextFunction) {
-    try {
-        const auth = req.header("Authorization") || "";
-        const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-        if (!token) return res.status(401).json({ ok: false, error: "Missing token" });
+export function signToken(
+    payload: object,
+    expiresIn: string | number = "7d",
+): string {
+    if (!JWT_SECRET) throw new Error("JWT secret missing");
+    return jwt.sign(payload, JWT_SECRET, { expiresIn });
+}
 
-        const secret = process.env.JWT_SECRET!;
-        const decoded = jwt.verify(token, secret) as any;
-        (req as any).admin = decoded;
+export function requireJWT(req: Request, res: Response, next: NextFunction) {
+    try {
+        const auth = String(req.headers.authorization || "");
+        const m = auth.match(/^Bearer\s+(.+)$/i);
+        if (!m) return res.status(401).json({ ok: false, error: "Unauthorized" });
+
+        if (!JWT_SECRET) return res.status(500).json({ ok: false, error: "Server misconfig" });
+
+        const decoded = jwt.verify(m[1], JWT_SECRET);
+        // Heng på req for videre bruk
+        (req as any).user = decoded;
         next();
-    } catch (e: any) {
+    } catch (e) {
         return res.status(401).json({ ok: false, error: "Invalid token" });
     }
 }
