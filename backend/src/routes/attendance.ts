@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
-import { requireAdmin } from "../middleware/admin.js";
-
+import { requireAdminOrJwt } from "../middleware/admin-or-jwt.js";
 
 export const attendance = Router();
 
@@ -94,7 +93,7 @@ attendance.post("/memorials/:slug/attendance", async (req, res) => {
  * (Admin) GET /api/memorials/:slug/attendance
  * Liste over påmeldinger
  */
-attendance.get("/memorials/:slug/attendance", requireAdmin, async (req, res) => {
+attendance.get("/memorials/:slug/attendance", requireAdminOrJwt, async (req, res) => {
     try {
         const slug = String(req.params.slug);
         const mem = await prisma.memorial.findUnique({ where: { slug } });
@@ -125,7 +124,7 @@ attendance.get("/memorials/:slug/attendance", requireAdmin, async (req, res) => 
 /**
  * (Admin) GET /api/memorials/:slug/attendance.csv
  */
-attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res) => {
+attendance.get("/memorials/:slug/attendance.csv", requireAdminOrJwt, async (req, res) => {
     try {
         const slug = String(req.params.slug);
         const mem = await prisma.memorial.findUnique({ where: { slug } });
@@ -193,7 +192,7 @@ attendance.get("/memorials/:slug/attendance.csv", requireAdmin, async (req, res)
     }
 });
 // Admin: Reconcile/promote waitlisted entries up to capacity
-attendance.post("/memorials/:slug/attendance/reconcile", requireAdmin, async (req, res) => {
+attendance.post("/memorials/:slug/attendance/reconcile", requireAdminOrJwt, async (req, res) => {
     try {
         const slug = String(req.params.slug);
 
