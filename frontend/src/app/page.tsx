@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // frontend/src/app/page.tsx
 import Link from "next/link";
 
@@ -24,6 +25,7 @@ function formatDate(iso?: string | null) {
     const d = new Date(iso);
     return new Intl.DateTimeFormat("nb-NO", { day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
 }
+
 // Ny hjelpefunksjon – legg den rett her:
 function formatDateTime(iso?: string | null) {
     if (!iso) return "";
@@ -62,23 +64,35 @@ const API_BASE =
         : "https://api.etterglod.no") as string;
 
 export default async function HomePage() {
-    // Hent en liten liste og filtrér i server- komponenten
-    const res = await fetch(`${API_BASE}/api/memorials?take=100`, {
-        // statisk-ish forside, men oppdatér ofte nok
-        next: { revalidate: 60 },
-    });
-
     let upcoming: MemorialListItem[] = [];
-    if (res.ok) {
-        const json = await res.json();
-        const items = (json?.items ?? []) as MemorialListItem[];
-        upcoming = items
-            .filter((m) => withinNextDays(m.ceremony?.dateTime, 10))
-            .sort((a, b) => {
-                const ta = new Date(a.ceremony?.dateTime ?? 0).getTime();
-                const tb = new Date(b.ceremony?.dateTime ?? 0).getTime();
-                return ta - tb;
-            });
+
+    try {
+        // Hent en liten liste og filtrér i server-komponenten
+        const res = await fetch(`${API_BASE}/api/memorials?take=100`, {
+            // statisk-ish forside, men oppdatér ofte nok
+            next: { revalidate: 60 },
+        });
+
+        if (res.ok) {
+            const json = await res.json();
+            const items = (json?.items ?? []) as MemorialListItem[];
+            upcoming = items
+                .filter((m) => withinNextDays(m.ceremony?.dateTime, 10))
+                .sort((a, b) => {
+                    const ta = new Date(a.ceremony?.dateTime ?? 0).getTime();
+                    const tb = new Date(b.ceremony?.dateTime ?? 0).getTime();
+                    return ta - tb;
+                });
+        } else {
+            console.error(
+                "HomePage: failed to fetch memorials",
+                res.status,
+                res.statusText,
+            );
+        }
+    } catch (error) {
+        console.error("HomePage: fetch to API failed", error);
+        // Lar upcoming være tom → viser bare fallback-teksten i UI
     }
 
     return (
@@ -137,16 +151,15 @@ export default async function HomePage() {
                                     >
                                         {/* Hele kortet */}
                                         <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-sm hover:shadow transition">
-
                                             {/* Banner med dato + sted */}
                                             <div className="w-full rounded-t-xl bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
-                                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                        {formatDateTime(m.ceremony?.dateTime ?? null)}
-                                    </span>
+                                                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                                    {formatDateTime(m.ceremony?.dateTime ?? null)}
+                                                </span>
                                                 {m.ceremony?.venue && (
                                                     <span className="text-sm text-zinc-600 dark:text-zinc-300 truncate">
-                                            {m.ceremony.venue}
-                                        </span>
+                                                        {m.ceremony.venue}
+                                                    </span>
                                                 )}
                                             </div>
 
@@ -234,7 +247,9 @@ export default async function HomePage() {
             <hr className="border-zinc-200 dark:border-zinc-800" />
             <footer className="py-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
                 © {new Date().getFullYear()} Etterglød · Kontakt:{" "}
-                <a className="underline" href="mailto:eiriksat@gmail.com">eiriksat@gmail.com</a>
+                <a className="underline" href="mailto:eiriksat@gmail.com">
+                    eiriksat@gmail.com
+                </a>
             </footer>
         </main>
     );
